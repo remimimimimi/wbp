@@ -4,12 +4,6 @@ use tiny_skia::Pixmap;
 use crate::layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
 use crate::css::{Value, Color};
 
-// pub struct Canvas {
-//     pub pixels: Vec<Color>,
-//     pub width: usize,
-//     pub height: usize,
-// }
-
 #[derive(Debug)]
 pub enum DisplayCommand {
     SolidColor(Color, Rect),
@@ -105,12 +99,6 @@ pub trait PixelBuffer: Sized {
 
 }
 
-// fn from_width_height(width: u32, height: u32) -> Option<Self> {
-//         let mut buff = Self::new(width, height)?;
-//         buff.fill(tiny_skia::Color::WHITE);
-//         Some(buff)
-//     }
-
 impl PixelBuffer for Pixmap {
     fn paint_item(&mut self, item: &DisplayCommand) {
         match item {
@@ -122,34 +110,3 @@ impl PixelBuffer for Pixmap {
         }
     }
 }
-
-// impl Canvas {
-//     /// Create a blank canvas
-//     fn new(width: usize, height: usize) -> Canvas {
-//         let white = Color { r: 255, g: 255, b: 255, a: 255 };
-//         Canvas {
-//             pixels: vec![white; width * height],
-//             width,
-//             height,
-//         }
-//     }
-
-//     fn paint_item(&mut self, item: &DisplayCommand) {
-//         match *item {
-//             DisplayCommand::SolidColor(color, rect) => {
-//                 // Clip the rectangle to the canvas boundaries.
-//                 let x0 = rect.x.clamp(0.0, self.width as f32) as usize;
-//                 let y0 = rect.y.clamp(0.0, self.height as f32) as usize;
-//                 let x1 = (rect.x + rect.width).clamp(0.0, self.width as f32) as usize;
-//                 let y1 = (rect.y + rect.height).clamp(0.0, self.height as f32) as usize;
-
-//                 for y in y0 .. y1 {
-//                     for x in x0 .. x1 {
-//                         // TODO: alpha compositing with existing pixel
-//                         self.pixels[y * self.width + x] = color;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
