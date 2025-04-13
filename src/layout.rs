@@ -1,10 +1,13 @@
 //! Basic CSS block layout.
 
-use crate::style::{StyledNode, Display};
-use crate::css::{Value::{Keyword, Length}, Unit::Px};
+use crate::css::{
+    Unit::Px,
+    Value::{Keyword, Length},
+};
+use crate::style::{Display, StyledNode};
 use std::default::Default;
 
-pub use self::BoxType::{AnonymousBlock, InlineNode, BlockNode};
+pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode};
 
 // CSS box model. All sizes are in px.
 
@@ -59,13 +62,16 @@ impl<'a> LayoutBox<'a> {
     fn get_style_node(&self) -> &'a StyledNode<'a> {
         match self.box_type {
             BlockNode(node) | InlineNode(node) => node,
-            AnonymousBlock => panic!("Anonymous block box has no style node")
+            AnonymousBlock => panic!("Anonymous block box has no style node"),
         }
     }
 }
 
 /// Transform a style tree into a layout tree.
-pub fn layout_tree<'a>(node: &'a StyledNode<'a>, mut containing_block: Dimensions) -> LayoutBox<'a> {
+pub fn layout_tree<'a>(
+    node: &'a StyledNode<'a>,
+    mut containing_block: Dimensions,
+) -> LayoutBox<'a> {
     // The layout algorithm expects the container height to start at 0.
     // TODO: Save the initial containing block height, for calculating percent heights.
     containing_block.content.height = 0.0;
@@ -81,14 +87,17 @@ fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
     let mut root = LayoutBox::new(match style_node.display() {
         Display::Block => BlockNode(style_node),
         Display::Inline => InlineNode(style_node),
-        Display::None => panic!("Root node has display: none.")
+        Display::None => panic!("Root node has display: none."),
     });
 
     // Create the descendant boxes.
     for child in &style_node.children {
         match child.display() {
             Display::Block => root.children.push(build_layout_tree(child)),
-            Display::Inline => root.get_inline_container().children.push(build_layout_tree(child)),
+            Display::Inline => root
+                .get_inline_container()
+                .children
+                .push(build_layout_tree(child)),
             Display::None => {} // Don't lay out nodes with `display: none;`
         }
     }
@@ -145,8 +154,18 @@ impl LayoutBox<'_> {
         let padding_left = style.lookup("padding-left", "padding", &zero);
         let padding_right = style.lookup("padding-right", "padding", &zero);
 
-        let total: f32 = [&margin_left, &margin_right, &border_left, &border_right,
-                          &padding_left, &padding_right, &width].iter().map(|v| v.to_px()).sum();
+        let total: f32 = [
+            &margin_left,
+            &margin_right,
+            &border_left,
+            &border_right,
+            &padding_left,
+            &padding_right,
+            &width,
+        ]
+        .iter()
+        .map(|v| v.to_px())
+        .sum();
 
         // If width is not auto and the total is wider than the container, treat auto margins as 0.
         if width != auto && total > containing_block.content.width {
@@ -170,13 +189,21 @@ impl LayoutBox<'_> {
             }
 
             // If exactly one size is auto, its used value follows from the equality.
-            (false, false, true) => { margin_right = Length(underflow, Px); }
-            (false, true, false) => { margin_left  = Length(underflow, Px); }
+            (false, false, true) => {
+                margin_right = Length(underflow, Px);
+            }
+            (false, true, false) => {
+                margin_left = Length(underflow, Px);
+            }
 
             // If width is set to auto, any other auto values become 0.
             (true, _, _) => {
-                if margin_left == auto { margin_left = Length(0.0, Px); }
-                if margin_right == auto { margin_right = Length(0.0, Px); }
+                if margin_left == auto {
+                    margin_left = Length(0.0, Px);
+                }
+                if margin_right == auto {
+                    margin_right = Length(0.0, Px);
+                }
 
                 if underflow >= 0.0 {
                     // Expand width to fill the underflow.
@@ -224,18 +251,24 @@ impl LayoutBox<'_> {
         d.margin.top = style.lookup("margin-top", "margin", &zero).to_px();
         d.margin.bottom = style.lookup("margin-bottom", "margin", &zero).to_px();
 
-        d.border.top = style.lookup("border-top-width", "border-width", &zero).to_px();
-        d.border.bottom = style.lookup("border-bottom-width", "border-width", &zero).to_px();
+        d.border.top = style
+            .lookup("border-top-width", "border-width", &zero)
+            .to_px();
+        d.border.bottom = style
+            .lookup("border-bottom-width", "border-width", &zero)
+            .to_px();
 
         d.padding.top = style.lookup("padding-top", "padding", &zero).to_px();
         d.padding.bottom = style.lookup("padding-bottom", "padding", &zero).to_px();
 
-        d.content.x = containing_block.content.x +
-                      d.margin.left + d.border.left + d.padding.left;
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
 
         // Position the box below all the previous boxes in the container.
-        d.content.y = containing_block.content.height + containing_block.content.y +
-                      d.margin.top + d.border.top + d.padding.top;
+        d.content.y = containing_block.content.height
+            + containing_block.content.y
+            + d.margin.top
+            + d.border.top
+            + d.padding.top;
     }
 
     /// Lay out the block's children within its content area.
@@ -266,8 +299,11 @@ impl LayoutBox<'_> {
                 // If we've just generated an anonymous block box, keep using it.
                 // Otherwise, create a new one.
                 match self.children.last() {
-                    Some(&LayoutBox { box_type: AnonymousBlock,..}) => {}
-                    _ => self.children.push(LayoutBox::new(AnonymousBlock))
+                    Some(&LayoutBox {
+                        box_type: AnonymousBlock,
+                        ..
+                    }) => {}
+                    _ => self.children.push(LayoutBox::new(AnonymousBlock)),
                 }
                 self.children.last_mut().unwrap()
             }

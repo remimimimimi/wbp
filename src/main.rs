@@ -35,7 +35,6 @@ pub fn initialize_logging() {
         .with_max_level(Level::DEBUG)
         // completes the builder.
         .finish();
-
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 }
 

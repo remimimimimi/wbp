@@ -28,13 +28,16 @@ pub struct ElementData {
 // Constructor functions for convenience:
 
 pub fn text(data: String) -> Node {
-    Node { children: vec![], node_type: NodeType::Text(data) }
+    Node {
+        children: vec![],
+        node_type: NodeType::Text(data),
+    }
 }
 
 pub fn elem(tag_name: String, attrs: AttrMap, children: Vec<Node>) -> Node {
     Node {
         children,
-        node_type: NodeType::Element(ElementData { tag_name, attrs })
+        node_type: NodeType::Element(ElementData { tag_name, attrs }),
     }
 }
 
@@ -47,7 +50,7 @@ impl ElementData {
     pub fn classes(&self) -> HashSet<&str> {
         match self.attrs.get("class") {
             Some(classlist) => classlist.split(' ').collect(),
-            None => HashSet::new()
+            None => HashSet::new(),
         }
     }
 }

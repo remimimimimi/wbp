@@ -15,7 +15,11 @@ use std::collections::HashMap;
 
 /// Parse an HTML document and return the root element.
 pub fn parse(source: String) -> dom::Node {
-    let mut nodes = Parser { pos: 0, input: source }.parse_nodes();
+    let mut nodes = Parser {
+        pos: 0,
+        input: source,
+    }
+    .parse_nodes();
 
     // If the document contains a root element, just return it. Otherwise, create one.
     if nodes.len() == 1 {
@@ -33,7 +37,7 @@ struct Parser {
 impl Parser {
     /// Parse a sequence of sibling nodes.
     fn parse_nodes(&mut self) -> Vec<dom::Node> {
-        let mut nodes = vec!();
+        let mut nodes = vec![];
         loop {
             self.consume_whitespace();
             if self.eof() || self.starts_with("</") {
@@ -142,7 +146,7 @@ impl Parser {
 
     /// Does the current input start with the given string?
     fn starts_with(&self, s: &str) -> bool {
-        self.input[self.pos ..].starts_with(s)
+        self.input[self.pos..].starts_with(s)
     }
 
     /// If the exact string `s` is found at the current position, consume it.
