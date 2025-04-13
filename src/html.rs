@@ -10,6 +10,8 @@
 //! * Non-well-formed markup
 //! * Character entities
 
+use tracing::debug;
+
 use crate::dom;
 use std::collections::HashMap;
 
@@ -50,7 +52,9 @@ impl Parser {
 
     /// Parse a single node.
     fn parse_node(&mut self) -> dom::Node {
-        if self.starts_with("<") {
+        if self.starts_with("<!--") {
+            self.parse_comment()
+        } else if self.starts_with("<") {
             self.parse_element()
         } else {
             self.parse_text()
@@ -74,6 +78,19 @@ impl Parser {
         self.expect(">");
 
         dom::elem(tag_name, attrs, children)
+    }
+
+    /// Parse a single comment for one line comments
+    fn parse_comment(&mut self) -> dom::Node {
+        // opening tag
+        self.expect("<!--");
+        let mut comment_text = String::new();
+        while !self.starts_with("-->") {
+            comment_text += &self.consume_char().to_string()
+        }
+        self.expect("-->");
+        debug!("Comment: {comment_text:?}");
+        dom::comment(comment_text)
     }
 
     /// Parse a tag or attribute name.

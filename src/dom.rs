@@ -17,6 +17,7 @@ pub struct Node {
 pub enum NodeType {
     Element(ElementData),
     Text(String),
+    Comment(String),
 }
 
 #[derive(Debug)]
@@ -26,6 +27,13 @@ pub struct ElementData {
 }
 
 // Constructor functions for convenience:
+
+pub fn comment(data: String) -> Node {
+    Node {
+        children: vec![],
+        node_type: NodeType::Comment(data),
+    }
+}
 
 pub fn text(data: String) -> Node {
     Node {
