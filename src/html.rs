@@ -85,7 +85,7 @@ impl Parser {
         // opening tag
         self.expect("<!--");
         let mut comment_text = String::new();
-        while !self.starts_with("-->") {
+        while !self.eof() && !self.starts_with("-->") {
             comment_text += &self.consume_char().to_string()
         }
         self.expect("-->");
