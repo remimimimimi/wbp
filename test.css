@@ -1,8 +1,8 @@
-* { display: block; padding: 12px; }
-.a { background: #ff0000; }
-.b { background: #ffa500; }
-.c { background: #ffff00; }
-.d { background: #008000; }
+* { display: block;  padding: 5px; }
+.a {display: block; height:100px; background: #ff0000; }
+.b {display: inline; margin:12px; background: #ffa500; }
+.c { display: block; height:3px; background: #ffff00; }
+.d { display:inline;  background: #008000; }
 .e { background: #0000ff; }
 .f { background: #4b0082; }
 .g { background: #800080; }
