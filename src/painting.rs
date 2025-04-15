@@ -1,8 +1,9 @@
 // This type replaces Canvas from the original article.
-use tiny_skia::Pixmap;
-
 use crate::css::{Color, Value};
 use crate::layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
+
+use ego_tree::*;
+use tiny_skia::Pixmap;
 
 #[derive(Debug)]
 pub enum DisplayCommand {
@@ -11,36 +12,36 @@ pub enum DisplayCommand {
 
 pub type DisplayList = Vec<DisplayCommand>;
 
-pub fn build_display_list(layout_root: &LayoutBox) -> DisplayList {
+pub fn build_display_list(layout_root: NodeRef<'_, LayoutBox>) -> DisplayList {
     let mut list = Vec::new();
     render_layout_box(&mut list, layout_root);
     list
 }
 
-fn render_layout_box(list: &mut DisplayList, layout_box: &LayoutBox) {
+fn render_layout_box(list: &mut DisplayList, layout_box: NodeRef<'_, LayoutBox>) {
     render_background(list, layout_box);
     render_borders(list, layout_box);
-    for child in &layout_box.children {
+    for child in layout_box.children() {
         render_layout_box(list, child);
     }
 }
 
-fn render_background(list: &mut DisplayList, layout_box: &LayoutBox) {
+fn render_background(list: &mut DisplayList, layout_box: NodeRef<'_, LayoutBox>) {
     if let Some(color) = get_color(layout_box, "background") {
         list.push(DisplayCommand::SolidColor(
             color,
-            layout_box.dimensions.border_box(),
+            layout_box.value().dimensions.border_box(),
         ));
     }
 }
 
-fn render_borders(list: &mut DisplayList, layout_box: &LayoutBox) {
+fn render_borders(list: &mut DisplayList, layout_box: NodeRef<LayoutBox>) {
     let color = match get_color(layout_box, "border-color") {
         Some(color) => color,
         _ => return,
     };
 
-    let d = &layout_box.dimensions;
+    let d = &layout_box.value().dimensions;
     let border_box = d.border_box();
 
     // Left border
@@ -89,8 +90,8 @@ fn render_borders(list: &mut DisplayList, layout_box: &LayoutBox) {
 }
 
 /// Return the specified color for CSS property `name`, or None if no color was specified.
-fn get_color(layout_box: &LayoutBox, name: &str) -> Option<Color> {
-    match layout_box.box_type {
+fn get_color(layout_box: NodeRef<LayoutBox>, name: &str) -> Option<Color> {
+    match &layout_box.value().box_type {
         BlockNode(style) | InlineNode(style) => match style.value(name) {
             Some(Value::ColorValue(color)) => Some(color),
             _ => None,
@@ -105,7 +106,7 @@ pub trait PixelBuffer: Sized {
     fn paint_item(&mut self, item: &DisplayCommand);
 
     /// Paint a tree of LayoutBoxes to an array of pixels.
-    fn paint(&mut self, layout_root: &LayoutBox) {
+    fn paint(&mut self, layout_root: NodeRef<'_, LayoutBox>) {
         let display_list = build_display_list(layout_root);
         for item in display_list {
             self.paint_item(&item);

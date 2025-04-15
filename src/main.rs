@@ -17,8 +17,6 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
 
 pub mod css;
-pub mod dom;
-pub mod html;
 pub mod layout;
 pub mod painting;
 pub mod style;
@@ -89,23 +87,28 @@ fn render_thread(
                 let html = read_source(HTML_FILE_PATH);
                 let css = read_source(CSS_FILE_PATH);
 
-                let root_node = html::parse(html.clone());
+                let document = scraper::Html::parse_fragment(&html);
+                // debug!("Document tree: {:#?}", document.tree);
+                // debug!("{}", document.tree);
                 let stylesheet = css::parse(css.clone());
-                let style_root = style::style_tree(&root_node, &stylesheet);
+                let style_tree = style::style_tree(&document.tree, &stylesheet);
 
-                // Update internal state and request a redraw
-                let layout_root = layout::layout_tree(
-                    &style_root,
-                    layout::Dimensions {
-                        content: layout::Rect {
-                            width: width.get() as f32,
-                            height: height.get() as f32,
-                            ..Default::default()
-                        },
+                let screen_dimensions = layout::Dimensions {
+                    content: layout::Rect {
+                        width: width.get() as f32,
+                        // height: height.get() as f32,
                         ..Default::default()
                     },
+                    ..Default::default()
+                };
+
+                // Update internal state and request a redraw
+                let layout_tree = layout::layout_tree(
+                    style_tree.root().first_child().unwrap(), // Omit Document node as it treated as inline
+                    screen_dimensions,
                 );
-                pixmap.paint(&layout_root);
+
+                pixmap.paint(layout_tree.root());
 
                 // Copy tiny_skia pixmap to the window buffer
                 let bytes = pixmap.data();
@@ -146,8 +149,8 @@ fn render_thread(
 }
 
 pub fn entry(event_loop: EventLoop<()>) {
-    let mut html_last_changed = dbg!(file_modified_time_in_seconds(HTML_FILE_PATH));
-    let mut css_last_changed = dbg!(file_modified_time_in_seconds(CSS_FILE_PATH));
+    let mut html_last_changed = file_modified_time_in_seconds(HTML_FILE_PATH);
+    let mut css_last_changed = file_modified_time_in_seconds(CSS_FILE_PATH);
 
     let app = winit_app::WinitAppBuilder::with_init(
         |elwt| {
