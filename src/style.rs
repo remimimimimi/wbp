@@ -3,18 +3,22 @@
 //! This is not very interesting at the moment.  It will get much more
 //! complicated if I add support for compound selectors.
 
-use crate::css::{Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value};
-use crate::dom::{ElementData, Node, NodeType};
+use ego_tree::*;
 use std::collections::HashMap;
+
+use crate::css::{Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value};
+
+use scraper::*;
 
 /// Map from CSS property names to values.
 pub type PropertyMap = HashMap<String, Value>;
 
+// TODO: Rewrite with reference to the Node in other tree.
 /// A node with associated style data.
-pub struct StyledNode<'a> {
-    pub node: &'a Node,
+#[derive(Clone, Debug, PartialEq)]
+pub struct StyledNode {
+    pub node: Node,
     pub specified_values: PropertyMap,
-    pub children: Vec<StyledNode<'a>>,
 }
 
 #[derive(PartialEq)]
@@ -24,7 +28,7 @@ pub enum Display {
     None,
 }
 
-impl<'a> StyledNode<'a> {
+impl StyledNode {
     /// Return the specified value of a property if it exists, otherwise `None`.
     pub fn value(&self, name: &str) -> Option<Value> {
         self.specified_values.get(name).cloned()
@@ -54,25 +58,21 @@ impl<'a> StyledNode<'a> {
 ///
 /// This finds only the specified values at the moment. Eventually it should be extended to find the
 /// computed values too, including inherited values.
-pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a Stylesheet) -> StyledNode<'a> {
-    StyledNode {
-        node: root,
-        specified_values: match root.node_type {
-            NodeType::Element(ref elem) => specified_values(elem, stylesheet),
-            NodeType::Text(_) => HashMap::new(),
+pub fn style_tree(root: &Tree<Node>, stylesheet: &Stylesheet) -> Tree<StyledNode> {
+    root.map_ref(|n| StyledNode {
+        node: n.clone(),
+        specified_values: match n {
+            Node::Element(element) => specified_values(element, stylesheet),
+            _ => HashMap::new(), // Just ignore styling of other elements, e.g. text for now.
         },
-        children: root
-            .children
-            .iter()
-            .map(|child| style_tree(child, stylesheet))
-            .collect(),
-    }
+    })
 }
 
+// TODO: ElementRef instead of ElementData
 /// Apply styles to a single element, returning the specified styles.
 ///
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &ElementData, stylesheet: &Stylesheet) -> PropertyMap {
+fn specified_values(elem: &scraper::node::Element, stylesheet: &Stylesheet) -> PropertyMap {
     let mut values = HashMap::new();
     let mut rules = matching_rules(elem, stylesheet);
 
@@ -83,6 +83,7 @@ fn specified_values(elem: &ElementData, stylesheet: &Stylesheet) -> PropertyMap 
             values.insert(declaration.name.clone(), declaration.value.clone());
         }
     }
+
     values
 }
 
@@ -90,7 +91,10 @@ fn specified_values(elem: &ElementData, stylesheet: &Stylesheet) -> PropertyMap 
 type MatchedRule<'a> = (Specificity, &'a Rule);
 
 /// Find all CSS rules that match the given element.
-fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a Stylesheet) -> Vec<MatchedRule<'a>> {
+fn matching_rules<'a>(
+    elem: &scraper::node::Element,
+    stylesheet: &'a Stylesheet,
+) -> Vec<MatchedRule<'a>> {
     // For now, we just do a linear scan of all the rules.  For large
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
@@ -102,7 +106,7 @@ fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a Stylesheet) -> Vec<Mat
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &ElementData, rule: &'a Rule) -> Option<MatchedRule<'a>> {
+fn match_rule<'a>(elem: &scraper::node::Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
     // Find the first (most specific) matching selector.
     rule.selectors
         .iter()
@@ -111,15 +115,20 @@ fn match_rule<'a>(elem: &ElementData, rule: &'a Rule) -> Option<MatchedRule<'a>>
 }
 
 /// Selector matching:
-fn matches(elem: &ElementData, selector: &Selector) -> bool {
+fn matches(elem: &scraper::node::Element, selector: &Selector) -> bool {
     match selector {
         Selector::Simple(s) => matches_simple_selector(elem, s),
     }
 }
 
-fn matches_simple_selector(elem: &ElementData, selector: &SimpleSelector) -> bool {
+fn matches_simple_selector(elem: &scraper::node::Element, selector: &SimpleSelector) -> bool {
+    // TODO: Check full name instead of just local one, but shood be good enough for now.
     // Check type selector
-    if selector.tag_name.iter().any(|name| elem.tag_name != *name) {
+    if selector
+        .tag_name
+        .iter()
+        .any(|name| elem.name.local.as_ref() != *name)
+    {
         return false;
     }
 
@@ -132,7 +141,7 @@ fn matches_simple_selector(elem: &ElementData, selector: &SimpleSelector) -> boo
     if selector
         .class
         .iter()
-        .any(|class| !elem.classes().contains(class.as_str()))
+        .any(|class| !elem.classes().any(|c| c == class.as_str()))
     {
         return false;
     }
