@@ -8,8 +8,7 @@ use std::time::UNIX_EPOCH;
 
 use tiny_skia::Pixmap;
 
-use tracing::*;
-use tracing_subscriber::FmtSubscriber;
+use log::*;
 
 use winit::event::{Event, KeyEvent, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -24,17 +23,6 @@ pub mod winit_app;
 
 const HTML_FILE_PATH: &str = "test.html";
 const CSS_FILE_PATH: &str = "test.css";
-
-pub fn initialize_logging() {
-    // a builder for `FmtSubscriber`.
-    let subscriber = FmtSubscriber::builder()
-        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
-        // will be written to stdout.
-        .with_max_level(Level::DEBUG)
-        // completes the builder.
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-}
 
 pub fn read_source(filename: &str) -> String {
     let mut s = String::new();
@@ -232,6 +220,6 @@ pub fn entry(event_loop: EventLoop<()>) {
 
 fn main() {
     use winit::event_loop::EventLoop;
-    initialize_logging();
-    entry(EventLoop::new().unwrap())
+    env_logger::init();
+    entry(EventLoop::new().unwrap());
 }
