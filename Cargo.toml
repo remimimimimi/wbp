@@ -1,17 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*"
+]
+
+
 [package]
 name = "wbp"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ego-tree = "0.10.0"
-scraper = "0.23.1"
 softbuffer = "0.4.6"
 tiny-skia = "0.11.4"
 url = "2.5.4"
 winit = "0.30"
 log = "0.4.27"
 env_logger = "0.11.8"
+
+cssparser = "0.35.0"
+ego-tree = "0.10.0"
+html5ever = "0.31.0"
+precomputed-hash = "0.1.1"
+selectors = "0.27.0"
+tendril = "0.4.3"
+
+css-macros = { path = "crates/css-macros" }
+sealed = "0.6.0"
+
+
+[features]
+default = ["errors"]
+errors = []
 
 [patch.crates-io]
 ego-tree = { git = 'https://github.com/remimimimimi/ego-tree.git', branch = "node-mut-traverse" }
