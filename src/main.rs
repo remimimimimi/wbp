@@ -16,6 +16,7 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
 
 pub mod css;
+pub mod html;
 pub mod layout;
 pub mod painting;
 pub mod style;
@@ -75,7 +76,7 @@ fn render_thread(
                 let html = read_source(HTML_FILE_PATH);
                 let css = read_source(CSS_FILE_PATH);
 
-                let document = scraper::Html::parse_fragment(&html);
+                let document = crate::html::Html::parse_fragment(&html);
                 // debug!("Document tree: {:#?}", document.tree);
                 // debug!("{}", document.tree);
                 let stylesheet = css::parse(css.clone());

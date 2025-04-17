@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use crate::css::{Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value};
 
-use scraper::*;
+use crate::html::*;
 
 /// Map from CSS property names to values.
 pub type PropertyMap = HashMap<String, Value>;
@@ -72,7 +72,7 @@ pub fn style_tree(root: &Tree<Node>, stylesheet: &Stylesheet) -> Tree<StyledNode
 /// Apply styles to a single element, returning the specified styles.
 ///
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &scraper::node::Element, stylesheet: &Stylesheet) -> PropertyMap {
+fn specified_values(elem: &crate::html::node::Element, stylesheet: &Stylesheet) -> PropertyMap {
     let mut values = HashMap::new();
     let mut rules = matching_rules(elem, stylesheet);
 
@@ -92,7 +92,7 @@ type MatchedRule<'a> = (Specificity, &'a Rule);
 
 /// Find all CSS rules that match the given element.
 fn matching_rules<'a>(
-    elem: &scraper::node::Element,
+    elem: &crate::html::node::Element,
     stylesheet: &'a Stylesheet,
 ) -> Vec<MatchedRule<'a>> {
     // For now, we just do a linear scan of all the rules.  For large
@@ -106,7 +106,7 @@ fn matching_rules<'a>(
 }
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
-fn match_rule<'a>(elem: &scraper::node::Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
+fn match_rule<'a>(elem: &crate::html::node::Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
     // Find the first (most specific) matching selector.
     rule.selectors
         .iter()
@@ -115,13 +115,13 @@ fn match_rule<'a>(elem: &scraper::node::Element, rule: &'a Rule) -> Option<Match
 }
 
 /// Selector matching:
-fn matches(elem: &scraper::node::Element, selector: &Selector) -> bool {
+fn matches(elem: &crate::html::node::Element, selector: &Selector) -> bool {
     match selector {
         Selector::Simple(s) => matches_simple_selector(elem, s),
     }
 }
 
-fn matches_simple_selector(elem: &scraper::node::Element, selector: &SimpleSelector) -> bool {
+fn matches_simple_selector(elem: &crate::html::node::Element, selector: &SimpleSelector) -> bool {
     // TODO: Check full name instead of just local one, but shood be good enough for now.
     // Check type selector
     if selector
