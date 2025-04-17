@@ -8,8 +8,12 @@ use crate::css::{
     Value::{Keyword, Length},
 };
 use crate::style::{Display, StyledNode};
+use std::{default::Default, ops::DerefMut};
 
 pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode};
+
+use ego_tree::*;
+use log::trace;
 
 // CSS box model. All sizes are in px.
 
@@ -108,59 +112,145 @@ fn build_layout_tree<'a>(style_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
 
 impl LayoutBox<'_> {
     /// Lay out a box and its descendants.
+    fn layout(&mut self, containing_block: Dimensions);
+
+    /// Lay out an inline element and its descendants.
+    fn layout_inline(&mut self, containing_block: Dimensions);
+
+    /// Calculate the width of a inline non-replaced element in normal flow.
+    /// Sets the horizontal margin/padding/border dimensions, and the `width`.
+    fn calculate_inline_width(&mut self);
+
+    fn calculate_inline_height(&mut self);
+
+    fn calculate_inline_position(&mut self);
+
+    /// Lay out a block-level element and its descendants.
+    fn layout_block(&mut self, containing_block: Dimensions);
+
+    /// Calculate the width of a block-level non-replaced element in normal flow.
+    ///
+    /// http://www.w3.org/TR/CSS2/visudet.html#blockwidth
+    ///
+    /// Sets the horizontal margin/padding/border dimensions, and the `width`.
+    fn calculate_block_width(&mut self, containing_block: Dimensions);
+
+    /// Finish calculating the block's edge sizes, and position it within its containing block.
+    ///
+    /// http://www.w3.org/TR/CSS2/visudet.html#normal-block
+    ///
+    /// Sets the vertical margin/padding/border dimensions, and the `x`, `y` values.
+    fn calculate_block_position(&mut self, containing_block: Dimensions);
+
+    /// Lay out the block's children within its content area.
+    // Sets `self.dimensions.height` to the total content height.
+    fn layout_block_children(&mut self);
+
+    /// Height of a block-level non-replaced element in normal flow with overflow visible.
+    fn calculate_block_height(&mut self);
+
+    /// Where a new inline child should go.
+    fn get_inline_container(&mut self) -> NodeMut<'_, LayoutBox>;
+}
+
+impl Layoutable for NodeMut<'_, LayoutBox> {
     fn layout(&mut self, containing_block: Dimensions) {
-        match self.box_type {
+        // TODO: Support other display types
+        match &self.value().box_type {
             BlockNode(_) => self.layout_block(containing_block),
-            InlineNode(_) => self.layout_inline(containing_block), 
-            AnonymousBlock => self.layout_anonymous(containing_block), 
-        }
+            InlineNode(_) => self.layout_inline(containing_block),
+            _ => {}
+        };
     }
 
-    fn layout_anonymous(&mut self, containing_block: Dimensions) {
-        // Recursively lay out the children of this box.
-        self.calculate_anonymous_width(containing_block);
-        self.layout_anonymous_children(containing_block);
+    fn layout_inline(&mut self, containing_block: Dimensions) {
+        self.calculate_inline_width();
+        self.calculate_inline_height();
+
     }
 
-    fn calculate_anonymous_width(&mut self, containing_block: Dimensions) {
-        let d = &mut self.dimensions;
+    fn calculate_inline_width(&mut self) {
+        let style = self.value().get_style_node().unwrap();
         let auto = Keyword("auto".to_string());
+        let zero = Length(0.0, Px);
 
-        d.content.width = containing_block.content.width;
-        d.padding.left = auto.clone().to_px();
-        d.padding.right = auto.clone().to_px();
+        let mut margin_left = style.lookup("margin-left", "margin", &zero);
+        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+        
+        let border_left = style.lookup("border-left-width", "border-width", &zero);
+        let border_right = style.lookup("border-right-width", "border-width", &zero);
 
-        d.border.left = auto.clone().to_px();
-        d.border.right = auto.clone().to_px();
+        let padding_left = style.lookup("padding-left", "padding", &zero);
+        let padding_right = style.lookup("padding-right", "padding", &zero);
+       
+        let mut d = self.value().dimensions;
 
-        d.margin.left = auto.clone().to_px();
-        d.margin.right = auto.clone().to_px();
-    }
-
-    fn layout_anonymous_children(&mut self, containing_block: Dimensions) {
-        let mut total_width = 0.0;
-        let mut total_height = 0.0;
-        for child in &mut self.children {
-            match child.box_type {
-                BoxType::InlineNode(_) => {
-                    child.calculate_inline_width(self.dimensions);
-                    child.calculate_inline_height(self.dimensions);
-                },
-                _ => panic!("Anonymous block box cannot have non-inline nodes"),
-            }
-            // Increment the height so each child is laid out below the previous one.
-            if self.dimensions.content.width < total_width + child.dimensions.margin_box().width {
-                total_width = 0.0;
-                child.calculate_inline_position(self.dimensions, true, total_width, total_height);
-                self.dimensions.content.height += child.dimensions.margin_box().height;
-                total_height += child.dimensions.margin_box().height;
-            } else {
-                child.calculate_inline_position(self.dimensions, false, total_width, total_height);
-                self.dimensions.content.height = f32::max(self.dimensions.content.height, child.dimensions.margin_box().height);
-            }
-            total_width += child.dimensions.margin_box().width;
+        if margin_left == auto {
+            margin_left = zero.clone();
         }
+        if margin_right == auto {
+            margin_right = zero.clone();
+        }
+
+        d.margin.left = margin_left.to_px();
+        d.margin.right = margin_right.to_px();
+
+        d.padding.left = padding_left.to_px();
+        d.padding.right = padding_right.to_px();
+
+        d.border.left = border_left.to_px();
+        d.border.right = border_right.to_px();
+
     }
+
+    fn calculate_inline_height(&mut self) {
+        // TODO the height should depend on the font size
+
+    }
+
+    fn calculate_inline_position(&mut self){
+        let style = self.value().get_style_node().unwrap().clone();
+        let d = &mut self.value().dimensions;
+
+        // margin, border, and padding have initial value 0.
+        let zero = Length(0.0, Px);
+
+        // If margin-top or margin-bottom is `auto`, the used value is zero.
+        d.margin.top = style.lookup("margin-top", "margin", &zero).to_px();
+        d.margin.bottom = style.lookup("margin-bottom", "margin", &zero).to_px();
+
+        d.border.top = style
+            .lookup("border-top-width", "border-width", &zero)
+            .to_px();
+        d.border.bottom = style
+            .lookup("border-bottom-width", "border-width", &zero)
+            .to_px();
+
+        d.padding.top = style.lookup("padding-top", "padding", &zero).to_px();
+        d.padding.bottom = style.lookup("padding-bottom", "padding", &zero).to_px();
+
+        match &self.prev_sibling() {
+            Some(sibling) => {
+                // check if we still can add element in the same line
+                match &self.parent() {
+                    Some(parent) => {
+                        let p_val =  parent.clone().value();
+                        let parent_corner = p_val.dimensions.margin_box().x + p_val.dimensions.clone().margin_box().width;
+                        let last_sibling_corner = sibling.value().dimensions.margin_box().x + p_val.dimensions.clone().margin_box().width;
+                        if last_sibling_corner + self.value().dimensions.margin_box().width  <=  parent_corner {
+        
+                        }
+                    },
+                    None => {trace!("The root element is inline!");}
+                }              
+            },
+            None => {
+                // the element is the first child of its parent
+            } 
+        }
+          
+    }
+
 
     /// Lay out a block-level element and its descendants.
     fn layout_block(&mut self, containing_block: Dimensions) {
