@@ -119,6 +119,12 @@ pub trait Layoutable {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: Dimensions);
 
+    fn layout_inline(&mut self);
+
+    fn calculate_inline_width(&mut self);
+
+    fn calculate_inline_position(&mut self); 
+
     /// Lay out a block-level element and its descendants.
     fn layout_block(&mut self, containing_block: Dimensions);
 
@@ -150,10 +156,182 @@ pub trait Layoutable {
 impl Layoutable for NodeMut<'_, LayoutBox> {
     fn layout(&mut self, containing_block: Dimensions) {
         // TODO: Support other display types
-        if let BlockNode(_) = &self.value().box_type {
-            self.layout_block(containing_block)
-        }
+        match &self.value().box_type {
+            BlockNode(_) => self.layout_block(containing_block),
+            InlineNode(_) => self.layout_inline(),
+            _ => {}
+        };
     }
+
+    fn layout_inline(&mut self) {
+        self.calculate_inline_width();
+        self.calculate_inline_position();
+    }
+
+    fn calculate_inline_width(&mut self) {
+        let style = self.value().get_style_node().unwrap();
+        let auto = Keyword("auto".to_string());
+        let zero = Length(0.0, Px);
+
+        let mut margin_left = style.lookup("margin-left", "margin", &zero);
+        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+        
+        let border_left = style.lookup("border-left-width", "border-width", &zero);
+        let border_right = style.lookup("border-right-width", "border-width", &zero);
+
+        let padding_left = style.lookup("padding-left", "padding", &zero);
+        let padding_right = style.lookup("padding-right", "padding", &zero);
+       
+        let mut d = self.value().dimensions;
+
+        if margin_left == auto {
+            margin_left = zero.clone();
+        }
+        if margin_right == auto {
+            margin_right = zero.clone();
+        }
+
+        d.margin.left = margin_left.to_px();
+        d.margin.right = margin_right.to_px();
+
+        d.padding.left = padding_left.to_px();
+        d.padding.right = padding_right.to_px();
+
+        d.border.left = border_left.to_px();
+        d.border.right = border_right.to_px();
+
+    }
+
+    fn calculate_inline_position(&mut self){
+        let style = self.value().get_style_node().unwrap();
+
+        // `width` has initial value `auto`.
+        let auto = Keyword("auto".to_string());
+
+        // margin, border, and padding have initial value 0.
+        let zero = Length(0.0, Px);
+
+        let margin_top = style.lookup("margin-top", "margin", &zero);
+        let margin_bottom = style.lookup("margin-bottom", "margin", &zero);
+
+        let border_top = style.lookup("border-top-width", "border-width", &zero);
+        let border_bottom = style.lookup("border-bottom-width", "border-width", &zero);
+
+        let padding_top = style.lookup("padding-top", "padding", &zero);
+        let padding_bottom = style.lookup("padding-bottom", "padding", &zero);
+        
+        let mut margin_left = style.lookup("margin-left", "margin", &zero);
+        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+
+        // CSS rules
+        if margin_left == auto {
+            margin_left = zero.clone();
+        }
+        if margin_right == auto {
+            margin_right = zero.clone();
+        }
+
+        let border_left = style.lookup("border-left-width", "border-width", &zero);
+        let border_right = style.lookup("border-right-width", "border-width", &zero);
+
+        let padding_left = style.lookup("padding-left", "padding", &zero);
+        let padding_right = style.lookup("padding-right", "padding", &zero);
+
+        // TODO the width should depend on the content 
+        let width: crate::css::Value =  Length(100.0, Px);
+        // TODO the height should depend on the font size
+        let height: crate::css::Value =  Length(50.0, Px);
+
+        let mut last_sibling_corner = 0.0;
+        let mut last_sibling_y = 0.0;
+        let mut last_sibling_height = 0.0;
+        let mut element_x = 0.0;
+        let mut element_y = 0.0;
+
+        match &mut self.prev_sibling() {
+            Some(sibling) => {
+                let d_sibling = sibling.value().dimensions;
+                last_sibling_corner = d_sibling.content.x 
+                                        + d_sibling.content.width 
+                                        + d_sibling.margin.right 
+                                        + d_sibling.border.right 
+                                        + d_sibling.padding.right;
+                last_sibling_y = d_sibling.content.y;
+                last_sibling_height = d_sibling.content.height 
+                                    + d_sibling.margin.bottom
+                                    + d_sibling.padding.bottom
+                                    + d_sibling.border.bottom
+            }
+            _ => ()
+        }        
+        match &mut self.parent() {
+            Some(parent) => {
+                let d_parent =  parent.value().dimensions;
+                let parent_corner = d_parent.content.x 
+                                            + d_parent.content.width 
+                                            + d_parent.margin.right 
+                                            + d_parent.border.right 
+                                            + d_parent.padding.right;
+                if !self.has_siblings() {
+                    element_x = parent_corner
+                                + margin_left.to_px()
+                                + border_left.to_px()
+                                + padding_left.to_px();
+                    // first element m
+                    element_y = d_parent.content.y
+                                    + margin_top.to_px()
+                                    + border_top.to_px()
+                                    + padding_top.to_px();
+                } else if last_sibling_corner + width.to_px() <= parent_corner {
+                    element_x = last_sibling_corner 
+                                    + margin_left.to_px()
+                                    + border_left.to_px()
+                                    + padding_left.to_px();
+                    
+                    // Should be modifiable
+                    // copy the y value, so the content is aligned
+                    element_y = last_sibling_y;
+                } else {
+                    // TODO create line boxes
+                    element_x = parent_corner
+                                + margin_left.to_px()
+                                + border_left.to_px()
+                                + padding_left.to_px();
+                    
+                    element_y = last_sibling_y + last_sibling_height
+                                    + margin_top.to_px()
+                                    + border_top.to_px()
+                                    + padding_top.to_px();
+                }
+            },
+            None => {panic!("The root element is inline!");}
+        }
+
+        let d = &mut self.value().dimensions;
+        d.content.width = width.to_px();
+        d.content.height = height.to_px();
+
+        d.content.x = element_x;
+        d.content.y = element_y;
+        d.padding.top = padding_top.to_px();
+        d.padding.bottom = padding_bottom.to_px();
+
+        d.border.top = border_top.to_px();
+        d.border.bottom = border_bottom.to_px();
+
+        d.margin.top = margin_top.to_px();
+        d.margin.bottom = margin_bottom.to_px();    
+
+        d.padding.left = padding_left.to_px();
+        d.padding.right = padding_right.to_px();
+
+        d.border.left = border_left.to_px();
+        d.border.right = border_right.to_px();
+
+        d.margin.left = margin_left.to_px();
+        d.margin.right = margin_right.to_px();       
+    }
+
 
     fn layout_block(&mut self, containing_block: Dimensions) {
         // Child width can depend on parent width, so we need to calculate this box's width before
