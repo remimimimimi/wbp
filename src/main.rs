@@ -111,10 +111,7 @@ fn render_thread(
                     // divisible by 4 we can safely assume
                     // that each chunk will be slice of 4
                     // elements.
-                    let pix_assembled = u32::from_be_bytes(
-                        <[u8; 4]>::try_from([0, pix[0], pix[1], pix[2]])
-                            .expect("Ups, I did it again..."),
-                    );
+                    let pix_assembled = u32::from_be_bytes([0, pix[0], pix[1], pix[2]]);
                     // Otherwise on window resize we will get panic, since actual window buffer will change, but pixmap won't.
                     if i < buffer.len() {
                         buffer[i] = pix_assembled;
