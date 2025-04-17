@@ -304,26 +304,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     }
 
     fn layout_block_children(&mut self) {
-        if let Some(mut child) = self.first_child() {
-            let dimensions = child.parent().unwrap().value().dimensions;
-            child.layout(dimensions);
-            child.parent().unwrap().value().dimensions.content.height +=
-                child.value().dimensions.margin_box().height;
+        self.for_each_child(|child| {
+            let parent_dimensions = child.parent().unwrap().value().dimensions;
+            child.layout(parent_dimensions);
 
-            while let Ok(mut next_child) = child.into_next_sibling() {
-                let dimensions = next_child.parent().unwrap().value().dimensions;
-                next_child.layout(dimensions);
-                next_child
-                    .parent()
-                    .unwrap()
-                    .value()
-                    .dimensions
-                    .content
-                    .height += next_child.value().dimensions.margin_box().height;
-
-                child = next_child;
-            }
-        }
+            let child_layouted_dimensions = child.value().dimensions;
+            // SAFE: We already checked that parent is in there.
+            let mut parent = unsafe { child.parent().unwrap_unchecked() };
+            parent.value().dimensions.content.height +=
+                child_layouted_dimensions.margin_box().height;
+        });
     }
 
     fn calculate_block_height(&mut self) {

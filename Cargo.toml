@@ -13,5 +13,8 @@ winit = "0.30"
 log = "0.4.27"
 env_logger = "0.11.8"
 
+[patch.crates-io]
+ego-tree = { git = 'https://github.com/remimimimimi/ego-tree.git', branch = "node-mut-traverse" }
+
 [profile.dev]
 opt-level = 1
