@@ -6,6 +6,8 @@ use std::num::NonZeroU32;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::UNIX_EPOCH;
 
+use lightningcss::stylesheet::{ParserOptions, StyleSheet};
+
 use tiny_skia::Pixmap;
 
 use log::*;
@@ -15,7 +17,7 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
 
-pub mod css;
+// pub mod css;
 pub mod layout;
 pub mod painting;
 pub mod style;
@@ -78,7 +80,7 @@ fn render_thread(
                 let document = scraper::Html::parse_fragment(&html);
                 // debug!("Document tree: {:#?}", document.tree);
                 // debug!("{}", document.tree);
-                let stylesheet = css::parse(css.clone());
+                let stylesheet = StyleSheet::parse(&css, ParserOptions::default()).unwrap();
                 let style_tree = style::style_tree(&document.tree, &stylesheet);
 
                 let screen_dimensions = layout::Dimensions {
@@ -222,4 +224,24 @@ fn main() {
     use winit::event_loop::EventLoop;
     env_logger::init();
     entry(EventLoop::new().unwrap());
+
+    //     use lightningcss::stylesheet::{MinifyOptions, ParserOptions, PrinterOptions, StyleSheet};
+
+    //     // Parse a style sheet from a string.
+    //     let stylesheet = StyleSheet::parse(
+    //         r#".foo, .bar {
+    //   color: red;
+    // }"#,
+    //         ParserOptions::default(),
+    //     )
+    //     .unwrap();
+
+    //     let css_rule = stylesheet.rules.0.first().unwrap();
+
+    //     match css_rule {
+    //         CssRule::Style(style_rule) => {
+    //             dbg!(&style_rule.selectors.to_string());
+    //         }
+    //         _ => {}
+    //     }
 }
