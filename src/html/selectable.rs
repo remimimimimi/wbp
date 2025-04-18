@@ -6,6 +6,8 @@ use crate::html::{
     selector::Selector,
 };
 
+use super::{element_ref::ElementNode, Node};
+
 /// Trait to abstract over collections of elements to which a [CSS selector][Selector] can be applied
 ///
 /// The mainly enables writing helper functions which are generic over [`Html`] and [`ElementRef`], e.g.
@@ -20,24 +22,24 @@ use crate::html::{
 ///     selectable.select(selector).next().map(|element| element.text().collect())
 /// }
 /// ```
-pub trait Selectable<'a> {
+pub trait Selectable<'a, E: ElementNode + 'a> {
     /// Iterator over [element references][ElementRef] matching a [CSS selector[Selector]
-    type Select<'b>: Iterator<Item = ElementRef<'a>>;
+    type Select<'b>: Iterator<Item = ElementRef<'a, E>>;
 
     /// Applies the given `selector` to the collection of elements represented by `self`
     fn select(self, selector: &Selector) -> Self::Select<'_>;
 }
 
-impl<'a> Selectable<'a> for &'a Html {
-    type Select<'b> = html::Select<'a, 'b>;
+impl<'a> Selectable<'a, Node> for &'a Html {
+    type Select<'b> = html::Select<'a, 'b, Node>;
 
     fn select(self, selector: &Selector) -> Self::Select<'_> {
         Html::select(self, selector)
     }
 }
 
-impl<'a> Selectable<'a> for ElementRef<'a> {
-    type Select<'b> = element_ref::Select<'a, 'b>;
+impl<'a, E: ElementNode + Clone> Selectable<'a, E> for ElementRef<'a, E> {
+    type Select<'b> = element_ref::Select<'a, 'b, E>;
 
     fn select(self, selector: &Selector) -> Self::Select<'_> {
         ElementRef::select(&self, selector)
@@ -48,9 +50,12 @@ impl<'a> Selectable<'a> for ElementRef<'a> {
 mod tests {
     use super::*;
 
-    fn select_one<'a, S>(selectable: S, selector: &Selector) -> Option<ElementRef<'a>>
+    fn select_one<'a, S, E: ElementNode>(
+        selectable: S,
+        selector: &Selector,
+    ) -> Option<ElementRef<'a, E>>
     where
-        S: Selectable<'a>,
+        S: Selectable<'a, E>,
     {
         selectable.select(selector).next()
     }

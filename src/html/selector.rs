@@ -14,6 +14,8 @@ use selectors::{
 use crate::html::error::SelectorErrorKind;
 use crate::html::ElementRef;
 
+use super::element_ref::ElementNode;
+
 /// Wrapper around CSS selectors.
 ///
 /// Represents a "selector group", i.e. a comma-separated list of selectors.
@@ -35,24 +37,28 @@ impl Selector {
     }
 
     /// Returns true if the element matches this selector.
-    pub fn matches(&self, element: &ElementRef) -> bool {
+    pub fn matches<E: ElementNode + Clone>(&self, element: &ElementRef<E>) -> bool {
         self.matches_with_scope(element, None)
     }
 
     /// Returns true if the element matches this selector.
     /// The optional `scope` argument is used to specify which element has `:scope` pseudo-class.
     /// When it is `None`, `:scope` will match the root element.
-    pub fn matches_with_scope(&self, element: &ElementRef, scope: Option<ElementRef>) -> bool {
+    pub fn matches_with_scope<E: ElementNode + Clone>(
+        &self,
+        element: &ElementRef<E>,
+        scope: Option<ElementRef<E>>,
+    ) -> bool {
         self.matches_with_scope_and_cache(element, scope, &mut Default::default())
     }
 
     // The `nth_index_cache` must not be used after `self` is dropped
     // to avoid incorrect results (even though no undefined behaviour is possible)
     // due to the usage of selector memory addresses as cache keys.
-    pub(crate) fn matches_with_scope_and_cache(
+    pub(crate) fn matches_with_scope_and_cache<E: ElementNode + Clone>(
         &self,
-        element: &ElementRef,
-        scope: Option<ElementRef>,
+        element: &ElementRef<E>,
+        scope: Option<ElementRef<E>>,
         caches: &mut matching::SelectorCaches,
     ) -> bool {
         let mut context = matching::MatchingContext::new(

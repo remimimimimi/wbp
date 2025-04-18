@@ -5,11 +5,11 @@ use selectors::{
     matching, Element, OpaqueElement,
 };
 
-use super::ElementRef;
+use super::{ElementNode, ElementRef};
 use crate::html::selector::{CssLocalName, CssString, NonTSPseudoClass, PseudoElement, Simple};
 
 /// Note: will never match against non-tree-structure pseudo-classes.
-impl Element for ElementRef<'_> {
+impl<E: ElementNode + Clone> Element for ElementRef<'_, E> {
     type Impl = Simple;
 
     fn opaque(&self) -> OpaqueElement {
