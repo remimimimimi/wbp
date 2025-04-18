@@ -119,9 +119,17 @@ pub trait Layoutable {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: Dimensions);
 
-    fn layout_inline(&mut self);
+    fn layout_anonymous(&mut self);
 
-    fn calculate_inline_width(&mut self);
+    fn calculate_anonymous_width(&mut self);
+
+    fn calculate_anonymous_position(&mut self);
+
+    fn calculate_anonymous_height(&mut self);
+    
+    fn calculate_anonymous_children(&mut self);
+
+    fn layout_inline(&mut self);
 
     fn calculate_inline_position(&mut self); 
 
@@ -159,47 +167,18 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         match &self.value().box_type {
             BlockNode(_) => self.layout_block(containing_block),
             InlineNode(_) => self.layout_inline(),
+            AnonymousBlock => self.layout_anonymous(),
             _ => {}
         };
     }
 
-    fn layout_inline(&mut self) {
-        self.calculate_inline_width();
-        self.calculate_inline_position();
+    fn layout_anonymous(&mut self) {
+        self.calculate_anonymous_width();
     }
 
-    fn calculate_inline_width(&mut self) {
-        let style = self.value().get_style_node().unwrap();
-        let auto = Keyword("auto".to_string());
-        let zero = Length(0.0, Px);
-
-        let mut margin_left = style.lookup("margin-left", "margin", &zero);
-        let mut margin_right = style.lookup("margin-right", "margin", &zero);
-        
-        let border_left = style.lookup("border-left-width", "border-width", &zero);
-        let border_right = style.lookup("border-right-width", "border-width", &zero);
-
-        let padding_left = style.lookup("padding-left", "padding", &zero);
-        let padding_right = style.lookup("padding-right", "padding", &zero);
-       
-        let mut d = self.value().dimensions;
-
-        if margin_left == auto {
-            margin_left = zero.clone();
-        }
-        if margin_right == auto {
-            margin_right = zero.clone();
-        }
-
-        d.margin.left = margin_left.to_px();
-        d.margin.right = margin_right.to_px();
-
-        d.padding.left = padding_left.to_px();
-        d.padding.right = padding_right.to_px();
-
-        d.border.left = border_left.to_px();
-        d.border.right = border_right.to_px();
-
+    fn layout_inline(&mut self) {
+        // TODO separate the functionality
+        self.calculate_inline_position();
     }
 
     fn calculate_inline_position(&mut self){
