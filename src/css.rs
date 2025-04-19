@@ -5,6 +5,8 @@
 
 // Data structures:
 
+pub mod parser;
+
 #[derive(Debug)]
 pub struct Stylesheet {
     pub rules: Vec<Rule>,
@@ -78,6 +80,12 @@ impl Value {
         }
     }
 }
+
+// impl Stylesheet {
+//     pub fn parse(source: &str) -> Self {
+//         todo!()
+//     }
+// }
 
 /// Parse a whole CSS stylesheet.
 pub fn parse(source: String) -> Stylesheet {
