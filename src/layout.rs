@@ -5,11 +5,12 @@ use crate::css::{
     Value::{Keyword, Length},
 };
 use crate::style::{Display, StyledNode};
-use std::default::Default;
+use std::{default::Default, ops::ControlFlow};
 
-pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode};
+pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode, LineBox};
 
 use ego_tree::*;
+use log::trace;
 
 // CSS box model. All sizes are in px.
 
@@ -53,6 +54,7 @@ pub enum BoxType {
     BlockNode(StyledNode),
     InlineNode(StyledNode),
     AnonymousBlock,
+    LineBox
 }
 
 impl LayoutBox {
@@ -66,7 +68,7 @@ impl LayoutBox {
     fn get_style_node(&self) -> Option<&StyledNode> {
         match &self.box_type {
             BlockNode(node) | InlineNode(node) => Some(node),
-            AnonymousBlock => None,
+            AnonymousBlock | LineBox => None,
         }
     }
 }
@@ -119,7 +121,13 @@ pub trait Layoutable {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: Dimensions);
 
+    fn layout_line(&mut self);
+
+    fn calculate_line_position(&mut self);
+
     fn layout_anonymous(&mut self);
+
+    fn layout_anonymous_children(&mut self);
 
     fn calculate_anonymous_width(&mut self);
 
@@ -127,11 +135,11 @@ pub trait Layoutable {
 
     fn calculate_anonymous_height(&mut self);
     
-    fn calculate_anonymous_children(&mut self);
-
     fn layout_inline(&mut self);
 
     fn calculate_inline_position(&mut self); 
+
+    fn layout_inline_children(&mut self);
 
     /// Lay out a block-level element and its descendants.
     fn layout_block(&mut self, containing_block: Dimensions);
@@ -168,17 +176,175 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             BlockNode(_) => self.layout_block(containing_block),
             InlineNode(_) => self.layout_inline(),
             AnonymousBlock => self.layout_anonymous(),
-            _ => {}
+            LineBox => self.layout_line(),
         };
+    }
+
+    fn layout_line(&mut self) {
+        // TODO: subtract padding/margin/border
+        self.value().dimensions.content.width = self.parent().unwrap().value().dimensions.content.width;
+        self.calculate_anonymous_height();
+        self.layout_inline_children();
+        // self.calculate_anonymous_width();
+        self.calculate_line_position();
+    }
+
+    fn calculate_line_position(&mut self) {
+        let id = self.id();
+        let d = self.value().dimensions.clone();
+
+        let mut slf0 = self.tree().get_mut(id).unwrap();
+
+        let mut x = 0.0;
+        let mut y = 0.0;
+        match slf0.into_prev_sibling() {
+            Ok(mut sibling) => {
+                y = sibling.value().dimensions.margin_box().y 
+                    + sibling.value().dimensions.margin_box().height
+                    + d.margin.top
+                    + d.padding.top
+                    + d.border.top;
+                // horizontal alignment
+                x = sibling.value().dimensions.margin_box().x
+                    + d.margin.left
+                    + d.padding.left
+                    + d.border.left;
+                
+                self.value().dimensions.content.x = x;
+                self.value().dimensions.content.y = y;   
+            },
+            Err(mut n) => {
+                // LineBox cannot be created in root (for now)
+                y = n.parent().unwrap().value().dimensions.content.y 
+                    + d.margin.top
+                    + d.padding.top
+                    + d.border.top;
+                x = n.parent().unwrap().value().dimensions.content.x
+                    + n.value().dimensions.margin.left
+                    + n.value().dimensions.padding.left
+                    + n.value().dimensions.border.left;
+
+                self.value().dimensions.content.x = x;
+                self.value().dimensions.content.y = y;
+            }
+        }
+
+     
     }
 
     fn layout_anonymous(&mut self) {
         self.calculate_anonymous_width();
+        self.calculate_anonymous_height();
+        self.calculate_anonymous_position();
+        self.layout_anonymous_children();
+    }
+
+    fn layout_anonymous_children(&mut self) {
+        // self.for_each_child(|n| {
+        //     let id = n.id();
+        //     let mut slf0 = n.tree().get_mut(id).unwrap();
+        //     // match slf0.value().box_type {
+        //     //     InlineNode(_) => {
+                    
+        //     //     },
+        //     //     _ => {}
+        //     // }
+        //     self.fo
+        //     match slf0.prev_sibling() {
+        //         Some(mut linebox) => {
+        //             let mut total_width = 0.0; 
+        //             linebox.for_each_child(|inline| {
+        //                 total_width += inline.value().dimensions.margin_box().width;
+        //             });
+        //             // previous must always be a LineBox
+        //             if linebox.value().dimensions.content.width > total_width
+        //             {
+        //                 let id = slf0.id().clone();
+
+        //                 linebox.append_id(id);
+
+        //             }  else {
+        //                 // create a new line box
+        //                 linebox.insert_after(LayoutBox::new(LineBox));
+        //                 slf0.detach();
+        //                 linebox.append_id(n.id());
+        //             }
+        //         },
+        //         None => {
+        //             // first child, create a line box and put it in
+        //             let mut new_linebox = slf0.insert_before(LayoutBox::new(LineBox));
+        //             let id = new_linebox.id();
+        //             slf0.detach();
+        //             new_linebox.append_id(slf0.id());
+        //         }
+        //     }
+        // });
+        let d = self.value().dimensions;
+        self.for_each_child(|child | {
+            child.layout(d);
+        });
+
+    }
+
+    fn calculate_anonymous_width(&mut self) {
+        let mut total_width  = 0.0;
+        self.for_each_child(|n| {
+            total_width = f32::max(n.value().dimensions.margin_box().width, total_width);
+        });
+        self.value().dimensions.content.width = total_width;
+    }
+
+    fn calculate_anonymous_height(&mut self) {
+        self.value().dimensions.content.height = 0.0;
+    }
+
+    fn calculate_anonymous_position(&mut self) {
+        let id = self.id();
+        let mut slf0 = self.tree().get_mut(id).unwrap();
+        let mut parent = slf0.into_parent().unwrap();
+
+        let x = parent.value().dimensions.content.x;
+        let y = parent.value().dimensions.content.y;
+
+        let d = &mut self.value().dimensions;
+        d.content.x = x
+                        + d.margin.left
+                        + d.padding.left
+                        + d.border.left;
+        d.content.y = y
+                        + d.margin.top
+                        + d.padding.top
+                        + d.border.top;
     }
 
     fn layout_inline(&mut self) {
         // TODO separate the functionality
+        self.calculate_anonymous_width();
+        self.calculate_anonymous_height();
         self.calculate_inline_position();
+        self.layout_inline_children();
+
+    }
+
+    fn layout_inline_children(&mut self) {
+        self.for_each_child(|child| {
+            match &child.value().box_type {
+                LineBox | AnonymousBlock | BlockNode(_) => {panic!("Cannot have non-inline children!");},
+                InlineNode(_) => {
+                    let parent_dimensions = child.parent().unwrap().value().dimensions;
+                    child.layout(parent_dimensions);
+        
+                    let child_layouted_dimensions = child.value().dimensions;
+                    // SAFE: We already checked that parent is in there.
+                    let mut parent = unsafe { child.parent().unwrap_unchecked() };
+                    parent.value().dimensions.content.width +=
+                        child_layouted_dimensions.margin_box().width;
+                    parent.value().dimensions.content.height = f32::max(
+                        parent.value().dimensions.content.height, 
+                        child_layouted_dimensions.margin_box().height);
+                }
+            }
+        });
     }
 
     fn calculate_inline_position(&mut self){
@@ -227,6 +393,8 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         let mut element_x = 0.0;
         let mut element_y = 0.0;
 
+
+
         match &mut self.prev_sibling() {
             Some(sibling) => {
                 let d_sibling = sibling.value().dimensions;
@@ -243,8 +411,9 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             }
             _ => ()
         }        
-        match &mut self.parent() {
-            Some(parent) => {
+        match &mut self.into_parent() {
+
+            Ok(parent) => {
                 let d_parent =  parent.value().dimensions;
                 let parent_corner = d_parent.content.x 
                                             + d_parent.content.width 
@@ -272,26 +441,51 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                     element_y = last_sibling_y;
                 } else {
                     // TODO create line boxes
-                    element_x = parent_corner
-                                + margin_left.to_px()
-                                + border_left.to_px()
-                                + padding_left.to_px();
+
+                    match parent.value().box_type {
+                        InlineNode(_) => {
+                            element_x = last_sibling_corner 
+                                    + margin_left.to_px()
+                                    + border_left.to_px()
+                                    + padding_left.to_px();
                     
-                    element_y = last_sibling_y + last_sibling_height
-                                    + margin_top.to_px()
-                                    + border_top.to_px()
-                                    + padding_top.to_px();
+                            // Should be modifiable
+                            // copy the y value, so the content is aligned
+                            element_y = last_sibling_y;
+                        },
+                        LineBox => {
+                            
+                            let mut linebox = parent.insert_after(LayoutBox::new(LineBox));
+                            self.for_each_next_sibling(|sibling| {
+                                sibling.detach();
+                                linebox.append_id(sibling.id());
+                            });
+
+                            element_x = parent_corner
+                                        + margin_left.to_px()
+                                        + border_left.to_px()
+                                        + padding_left.to_px();
+                            
+                            element_y = last_sibling_y + last_sibling_height
+                                            + margin_top.to_px()
+                                            + border_top.to_px()
+                                            + padding_top.to_px();
+                        },
+                        _ => {trace!("Inline elements cannot be not in inline or linebox for now!");}
+                    }
                 }
             },
-            None => {panic!("The root element is inline!");}
+            Err(element) => {panic!("The root element is inline!");}
         }
 
         let d = &mut self.value().dimensions;
-        d.content.width = width.to_px();
-        d.content.height = height.to_px();
 
         d.content.x = element_x;
         d.content.y = element_y;
+
+        d.content.width = width.to_px();
+        d.content.height = height.to_px();
+        
         d.padding.top = padding_top.to_px();
         d.padding.bottom = padding_bottom.to_px();
 
@@ -429,6 +623,19 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     }
 
     fn calculate_block_position(&mut self, containing_block: Dimensions) {
+   
+        let mut y = 0.0;
+        let mut x = 0.0; 
+        // Position the box below all the previous boxes in the container.
+        match self.prev_sibling() {
+            Some(mut p) => {
+                y = p.value().dimensions.margin_box().y +
+                        p.value().dimensions.margin_box().height; 
+            },
+            None => {
+                y = containing_block.content.y;
+            }
+        }
         let v = self.value();
         let style = v.get_style_node().unwrap().clone();
         let d = &mut v.dimensions;
@@ -450,14 +657,15 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         d.padding.top = style.lookup("padding-top", "padding", &zero).to_px();
         d.padding.bottom = style.lookup("padding-bottom", "padding", &zero).to_px();
 
-        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
+        d.content.x = containing_block.content.x 
+                        + d.margin.left
+                        + d.padding.left
+                        + d.border.left;
+        d.content.y = y 
+                        + d.margin.top
+                        + d.padding.top
+                        + d.border.top;
 
-        // Position the box below all the previous boxes in the container.
-        d.content.y = containing_block.content.height
-            + containing_block.content.y
-            + d.margin.top
-            + d.border.top
-            + d.padding.top;
     }
 
     fn layout_block_children(&mut self) {
@@ -468,6 +676,7 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             let child_layouted_dimensions = child.value().dimensions;
             // SAFE: We already checked that parent is in there.
             let mut parent = unsafe { child.parent().unwrap_unchecked() };
+            
             parent.value().dimensions.content.height +=
                 child_layouted_dimensions.margin_box().height;
         });
@@ -485,21 +694,47 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         let id = self.id();
         let mut slf0 = self.tree().get_mut(id).unwrap();
         match &slf0.value().box_type {
-            InlineNode(_) | AnonymousBlock => slf0,
+            InlineNode(_) => slf0,
             BlockNode(_) => match slf0.into_last_child() {
                 Ok(mut n) => {
                     if n.value().box_type == AnonymousBlock {
-                        n
+                        n = n.into_last_child().unwrap();
+                        match n.value().box_type {
+                            LineBox => n,
+                            _ => {
+                                n.insert_after(LayoutBox::new(LineBox));
+                                n.into_next_sibling().unwrap()
+                            }
+                        }
                     } else {
                         let _ = n.insert_after(LayoutBox::new(AnonymousBlock));
-                        n.into_next_sibling().unwrap()
+                        n = n.into_next_sibling().unwrap();
+                        n.append(LayoutBox::new(LineBox));
+                        n.into_last_child().unwrap()
                     }
                 }
                 Err(mut slf) => {
                     slf.append(LayoutBox::new(AnonymousBlock));
+                    slf = slf.into_last_child().unwrap();
+                    slf.append(LayoutBox::new(LineBox));
                     slf.into_last_child().unwrap()
                 }
             },
+            AnonymousBlock => match slf0.into_last_child() {
+                Ok(mut n) => {
+                    if n.value().box_type == LineBox {
+                        n
+                    } else {
+                        let _ = n.insert_after(LayoutBox::new(LineBox));
+                        n.into_next_sibling().unwrap()
+                    }
+                }
+                Err(mut slf) => {
+                    slf.append(LayoutBox::new(LineBox));
+                    slf.into_last_child().unwrap()
+                }
+            },
+            LineBox => slf0
         }
     }
 }

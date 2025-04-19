@@ -1,5 +1,6 @@
 // This type replaces Canvas from the original article.
 use crate::css::{Color, Value};
+use crate::layout::BoxType::LineBox;
 use crate::layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
 
 use ego_tree::*;
@@ -96,7 +97,7 @@ fn get_color(layout_box: NodeRef<LayoutBox>, name: &str) -> Option<Color> {
             Some(Value::ColorValue(color)) => Some(color),
             _ => None,
         },
-        AnonymousBlock => None,
+        AnonymousBlock | LineBox => None,
     }
 }
 
