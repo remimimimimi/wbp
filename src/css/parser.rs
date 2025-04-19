@@ -1,8 +1,10 @@
 use cssparser::*;
 
+use super::super::html::Selector;
+
 #[derive(Clone, Debug)]
 pub struct Rule {
-    pub selectors: Vec<String>,
+    pub selectors: Selector,
     pub declarations: Vec<Declaration>,
 }
 
@@ -89,7 +91,7 @@ impl RuleBodyItemParser<'_, Declaration, ()> for DeclParser {
 }
 
 impl<'i> QualifiedRuleParser<'i> for RuleParser {
-    type Prelude = Vec<String>;
+    type Prelude = Selector;
     type QualifiedRule = Rule;
     type Error = ();
 
@@ -97,21 +99,24 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
     fn parse_prelude<'t>(
         &mut self,
         input: &mut Parser<'i, 't>,
-    ) -> Result<Vec<String>, ParseError<'i, ()>> {
-        input.parse_comma_separated(|input| {
-            let start_pos = input.position();
-            while let Ok(_tok) = input.next() {
-                //
-            }
-            let end_pos = input.position();
+    ) -> Result<Selector, ParseError<'i, ()>> {
+        let start_pos = input.position();
+        while let Ok(_tok) = input.next() {
+            //
+        }
+        let end_pos = input.position();
 
-            Ok(input.slice(start_pos..end_pos).trim().into())
+        let selectors = input.slice(start_pos..end_pos).trim();
+
+        Selector::parse(selectors).map_err(|_| ParseError {
+            kind: ParseErrorKind::Custom(()),
+            location: input.current_source_location(),
         })
     }
 
     fn parse_block<'t>(
         &mut self,
-        prelude: Vec<String>,
+        prelude: Selector,
         _: &ParserState,
         input: &mut Parser<'i, 't>,
     ) -> Result<Rule, ParseError<'i, ()>> {
