@@ -1,3 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*"
+]
+
+
 [package]
 name = "wbp"
 version = "0.1.0"
@@ -17,6 +24,9 @@ html5ever = "0.31.0"
 precomputed-hash = "0.1.1"
 selectors = "0.27.0"
 tendril = "0.4.3"
+
+css-macros = { path = "crates/css-macros" }
+
 
 [features]
 default = ["errors"]

@@ -1,0 +1,62 @@
+[
+    {
+        "name": "padding-top",
+        "values": "<padding-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "padding-right",
+        "values": "<padding-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "padding-bottom",
+        "values": "<padding-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "padding-left",
+        "values": "<padding-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "padding",
+        "values": "<padding-width> | inherit", // TODO: <padding-width>{1,4} | inherit
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "margin-top",
+        "values": "<margin-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "margin-right",
+        "values": "<margin-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "margin-bottom",
+        "values": "<margin-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "margin-left",
+        "values": "<margin-width> | inherit",
+        "initial_value": "0",
+        "inherited": false,
+    },
+    {
+        "name": "margin",
+        "values": "<margin-width> | inherit", // TODO: <margin-width>{1,4} | inherit
+        "initial_value": "0",
+        "inherited": false,
+    }
+]
