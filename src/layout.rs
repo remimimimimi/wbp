@@ -5,11 +5,12 @@ use crate::css::{
     Value::{Keyword, Length},
 };
 use crate::style::{Display, StyledNode};
-use std::default::Default;
+use std::{default::Default, vec};
 
-pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode};
+pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode, LineBox};
 
 use ego_tree::*;
+use log::trace;
 
 // CSS box model. All sizes are in px.
 
@@ -53,6 +54,8 @@ pub enum BoxType {
     BlockNode(StyledNode),
     InlineNode(StyledNode),
     AnonymousBlock,
+    // only created in block containers
+    LineBox,
 }
 
 impl LayoutBox {
@@ -66,7 +69,7 @@ impl LayoutBox {
     fn get_style_node(&self) -> Option<&StyledNode> {
         match &self.box_type {
             BlockNode(node) | InlineNode(node) => Some(node),
-            AnonymousBlock => None,
+            AnonymousBlock | LineBox => None,
         }
     }
 }
@@ -119,8 +122,23 @@ pub trait Layoutable {
     /// Lay out a box and its descendants.
     fn layout(&mut self, containing_block: Dimensions);
 
+    // Lay out an anonymous block element and its descendants (inline elements for now)
+    fn layout_anonymous(&mut self, containing_block: Dimensions);
+
     /// Lay out a block-level element and its descendants.
     fn layout_block(&mut self, containing_block: Dimensions);
+
+    /// Lay out a line box and its descendants (inline elements for now)
+    fn layout_linebox(&mut self, containing_block: Dimensions);
+
+    /// lay out
+    fn layout_inline(&mut self, containing_block: Dimensions);
+
+    fn layout_inline_children(&mut self, containing_block: Dimensions);
+
+    fn calculate_inline_width(&mut self);
+
+    fn calculate_inline_height(&mut self);
 
     /// Calculate the width of a block-level non-replaced element in normal flow.
     ///
@@ -150,9 +168,173 @@ pub trait Layoutable {
 impl Layoutable for NodeMut<'_, LayoutBox> {
     fn layout(&mut self, containing_block: Dimensions) {
         // TODO: Support other display types
-        if let BlockNode(_) = &self.value().box_type {
-            self.layout_block(containing_block)
+        match self.value().box_type {
+            BlockNode(_) => self.layout_block(containing_block),
+            AnonymousBlock => self.layout_anonymous(containing_block),
+            LineBox => self.layout_linebox(containing_block),
+            _ => {}
         }
+    }
+
+    fn layout_linebox(&mut self, containing_block: Dimensions) {
+        // width and height should be known by now
+
+        // TODO: write a separate function for position calculation
+        let d = &mut self.value().dimensions;
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
+
+        // Position the box below all the previous boxes in the container.
+        d.content.y = containing_block.content.height
+            + containing_block.content.y
+            + d.margin.top
+            + d.border.top
+            + d.padding.top;
+
+        let d = self.value().dimensions;
+        // TODO: write a separate function for children layouting
+        // method call layouting for InlineNode or text
+        self.for_each_child(|c| {
+            c.layout(d);
+        });
+    }
+
+    fn layout_inline(&mut self, containing_block: Dimensions) {
+        // TODO: write a separate function for position calculation
+        // TODO: maybe? use prev_sibling + its width instead
+        let mut accumulated_width = 0.0;
+        self.for_each_prev_sibling(|s| {
+            // TODO: generalize the width calculation, because inline elements can also have TextBox as children
+            s.calculate_inline_width();
+            accumulated_width += s.value().dimensions.margin_box().width;
+        });
+        let d = &mut self.value().dimensions;
+        d.content.x = containing_block.content.x
+            + accumulated_width
+            + d.margin.left
+            + d.border.left
+            + d.padding.left;
+        self.value().dimensions.content.y =
+            containing_block.content.y + d.margin.top + d.border.top + d.padding.top;
+
+        self.calculate_inline_width();
+        self.calculate_inline_height();
+
+        let d = self.value().dimensions;
+
+        self.layout_inline_children(d);
+    }
+
+    fn layout_inline_children(&mut self, containing_block: Dimensions) {
+        self.for_each_child(|c| {
+            c.layout(containing_block);
+        });
+    }
+
+    fn layout_anonymous(&mut self, containing_block: Dimensions) {
+        // TODO: write a separate function for the width calculation
+        let d = &mut self.value().dimensions;
+        let total = d.margin_box().width - d.content.width;
+        d.content.width = containing_block.content.width - total;
+        d.content.height = 0.0;
+        // TODO: Write a separate function for position calculation
+        d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
+
+        // Position the box below all the previous boxes in the container.
+        d.content.y = containing_block.content.height
+            + containing_block.content.y
+            + d.margin.top
+            + d.border.top
+            + d.padding.top;
+
+        // TODO: write a separate function for layouting children
+        // LineBoxes have the same width as its containing anonymous blocks
+
+        let anonymous_block_width = d.content.width;
+
+        let children_ids = self
+            .as_ref()
+            .children()
+            .map(|c| c.id())
+            .collect::<Vec<NodeId>>();
+
+        let mut accumulated_width = 0.0;
+
+        let mut nodes_ids_per_line: Vec<Vec<NodeId>> = vec![vec![]];
+        let mut line_index = 0;
+        for child_id in children_ids.iter() {
+            let mut inline_box = self.tree().get_mut(*child_id).unwrap();
+            // TODO: recursively ask the inline box to find its width
+            inline_box.calculate_inline_width();
+            let inline_box_width = inline_box.value().dimensions.margin_box().width;
+
+            // TODO: for TextBox and possibly other types fragmentation should occur here
+            if accumulated_width + inline_box_width >= anonymous_block_width {
+                nodes_ids_per_line[line_index].push(*child_id);
+                line_index += 1;
+                nodes_ids_per_line.push(vec![]);
+                accumulated_width = 0.0;
+            } else {
+                accumulated_width += inline_box_width;
+                nodes_ids_per_line[line_index].push(*child_id);
+            }
+        }
+
+        for child_id in children_ids {
+            let mut child = self.tree().get_mut(child_id).unwrap();
+            child.detach();
+        }
+
+        for line_inline_box_ids in nodes_ids_per_line {
+            // Calculate line box dimensions.
+
+            // TODO: calculate the width and the height of the LineBox in separate functions
+            let mut maximum_inline_box_height = 0.0;
+            for inline_box_id in line_inline_box_ids.clone() {
+                let inline_box = self.tree().get(inline_box_id).unwrap();
+                let inline_box_height = inline_box.value().dimensions.margin_box().height;
+                maximum_inline_box_height = f32::max(maximum_inline_box_height, inline_box_height);
+            }
+
+            let mut line_node = self.append(LayoutBox::new(LineBox));
+            line_node.value().dimensions.content.width = anonymous_block_width;
+            line_node.value().dimensions.content.height = maximum_inline_box_height;
+
+            // Append children
+            for inline_box_id in line_inline_box_ids {
+                line_node.append_id(inline_box_id);
+            }
+        }
+
+        // TODO: write a separate function for anonymous block children layouting
+        self.for_each_child(|child| {
+            let parent_dimensions = child.parent().unwrap().value().dimensions;
+            child.layout(parent_dimensions);
+
+            let child_layouted_dimensions = child.value().dimensions;
+            // SAFE: We already checked that parent is in there.
+            let mut parent = unsafe { child.parent().unwrap_unchecked() };
+            parent.value().dimensions.content.height +=
+                child_layouted_dimensions.margin_box().height;
+        });
+
+        // Default height of the anonymous box is set to zero
+        // incremently layout the line boxes similarly to block elements
+        // width and height of the line boxes is already known
+        // position should depend on the height of the anonymous box (add it to the end as in block layout)
+        // children are simply layed out in line one after one
+
+        // TODO: layout the line boxes
+
+        // We know the width of the containing block (it is calculated prior to layouting the children)
+        // the height of the anonymous block will be then used to calculate the total height of the containg block
+        // TODO:
+        // + decide LineBoxes' width based on the width of the containing box
+        // + compute inline box width for each child (may depend on the children of a child and so on)
+        // + put inline boxes in LineBoxes
+        // + find the LineBox height from the height of the tallest inline box child
+        // + layout the LineBox elements
+        // + stack the LineBox vertically
+        // + set the height for anonymous block box (sum of heights of all LineBoxes)
     }
 
     fn layout_block(&mut self, containing_block: Dimensions) {
@@ -169,6 +351,39 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         // Parent height can depend on child height, so `calculate_height` must be called after the
         // children are laid out.
         self.calculate_block_height();
+    }
+
+    fn calculate_inline_width(&mut self) {
+        let mut accumulated_width = 0.0;
+        self.for_each_child(|c| {
+            // TODO: generalize the width calculation, because inline elements can also have TextBox as children
+            c.calculate_inline_width();
+            accumulated_width += c.value().dimensions.margin_box().width;
+        });
+
+        if accumulated_width == 0.0 {
+            // TODO: change this default value to something else when text support is added
+            accumulated_width = 100.0;
+        }
+
+        self.value().dimensions.content.width = accumulated_width;
+    }
+
+    fn calculate_inline_height(&mut self) {
+        // TODO: should depend on text inside or replaced content
+        let mut max_height = 0.0;
+        self.for_each_child(|c| {
+            // TODO: generalize the height calculation, because inline elements can also have TextBox as children
+            c.calculate_inline_height();
+            max_height = f32::max(max_height, c.value().dimensions.margin_box().height);
+        });
+
+        if max_height == 0.0 {
+            // TODO: change this default value to something else when text support is added
+            max_height = 50.0;
+        }
+        let d = &mut self.value().dimensions;
+        d.content.height = max_height;
     }
 
     fn calculate_block_width(&mut self, containing_block: Dimensions) {
@@ -324,6 +539,7 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         }
     }
 
+    // TODO: think thorugh what inline container should be
     fn get_inline_container(&mut self) -> NodeMut<'_, LayoutBox> {
         let id = self.id();
         let mut slf0 = self.tree().get_mut(id).unwrap();
@@ -338,11 +554,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                         n.into_next_sibling().unwrap()
                     }
                 }
+                // TODO: possibly create an unnecessary anonymous block e.g. if all children are inline
                 Err(mut slf) => {
+                    trace!("one");
+
                     slf.append(LayoutBox::new(AnonymousBlock));
                     slf.into_last_child().unwrap()
                 }
             },
+            // LineBox must have a parent
+            LineBox => slf0.into_parent().unwrap(),
         }
     }
 }
