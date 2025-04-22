@@ -13,4 +13,7 @@ litrs = "0.4.1"
 proc-macro2 = "1.0.95"
 quote = "1.0.40"
 serde = { version = "1.0.219", features = ["derive"]}
-
+css-vds-parser = { path = "../css-vds-parser" }
+chumsky = "0.10.1"
+syn = { version = "2.0.100", features = ["full"]}
+prettyplease = "0.2.32"

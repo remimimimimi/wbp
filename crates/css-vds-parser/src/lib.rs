@@ -5,49 +5,55 @@ use chumsky::prelude::*;
 // AST definition carrying &str slices
 #[derive(Debug, Clone, PartialEq)]
 pub enum VDS<'a> {
-    Sequence(Vec<VDS<'a>>),
-    Choice(Vec<VDS<'a>>),
-    AllOf(Vec<VDS<'a>>),
-    OneOrMoreOf(Vec<VDS<'a>>),
-    Type(&'a str),
+    /// Just a keyword, regular ident.
     Keyword(&'a str),
+    /// Some built-in values, have syntax `<some-ident>`.
+    Value(&'a str),
+    /// Already defined property, have syntax `'some-property'`.
+    Type(&'a str),
+
     ZeroOrMore(Box<VDS<'a>>),
     OneOrMore(Box<VDS<'a>>),
     Optional(Box<VDS<'a>>),
     Range(Box<VDS<'a>>, usize, usize),
+
+    Sequence(Vec<VDS<'a>>),
+    Choice(Vec<VDS<'a>>),
+    AllOf(Vec<VDS<'a>>),
+    OneOrMoreOf(Vec<VDS<'a>>),
+}
+
+impl VDS<'_> {
+    pub fn as_ext_ty(&self) -> Option<&str> {
+        match self {
+            VDS::Keyword(s) | VDS::Value(s) | VDS::Type(s) => Some(*s),
+            _ => None,
+        }
+    }
 }
 
 pub fn css_value_parser<'a>() -> impl Parser<'a, &'a str, VDS<'a>> {
-    // Parse keywords: sequences of letters or hyphens
-    let keyword = any()
+    let ident = any()
         .filter(|c: &char| c.is_alphabetic() || *c == '-')
         .repeated()
         .at_least(1)
         .to_slice()
-        .padded()
-        .map(VDS::Keyword);
+        .padded();
 
-    // Parse <type> placeholders, possibly quoted
-    let type_ph = just('<')
-        .ignore_then(choice((
-            just('\'')
-                .ignore_then(
-                    any()
-                        .filter(|c| *c != '\'')
-                        .repeated()
-                        .at_least(1)
-                        .to_slice(),
-                )
-                .then_ignore(just('\'')),
-            any()
-                .filter(|c: &char| c.is_alphabetic() || *c == '-')
-                .repeated()
-                .at_least(1)
-                .to_slice(),
-        )))
-        .then_ignore(just('>'))
-        .padded()
-        .map(VDS::Type);
+    // Parse keywords: sequences of letters or hyphens
+    let keyword = ident.clone().map(VDS::Keyword);
+
+    // Parse <value> placeholders
+    let value = ident
+        .clone()
+        .map(VDS::Value)
+        .delimited_by(just('<').padded(), just('>').padded());
+
+    // Parse <type> placeholders.
+    let type_parser = ident
+        .clone()
+        .map(VDS::Type)
+        .delimited_by(just('\'').padded(), just('\'').padded());
 
     recursive(|expr| {
         // Grouping with [ ... ]
@@ -55,7 +61,7 @@ pub fn css_value_parser<'a>() -> impl Parser<'a, &'a str, VDS<'a>> {
             .clone()
             .delimited_by(just('[').padded(), just(']').padded());
 
-        let base = choice((group, type_ph.clone(), keyword.clone()));
+        let base = choice((group, value.clone(), type_parser.clone(), keyword.clone()));
 
         // Multipliers: *, +, ?, or {n,m}
         let mult = choice((
@@ -63,13 +69,14 @@ pub fn css_value_parser<'a>() -> impl Parser<'a, &'a str, VDS<'a>> {
             just('+').to((1, None)).padded(),
             just('?').to((0, Some(1))).padded(),
             // explicit ranges like {n,m}
-            just('{')
+            text::int(10)
+                .from_str::<usize>()
+                .unwrapped()
                 .padded()
-                .ignore_then(text::int(10).from_str::<usize>().unwrapped().padded())
                 .then_ignore(just(',').padded())
                 .then(text::int(10).from_str::<usize>().unwrapped())
-                .then_ignore(just('}').padded())
-                .map(|(min, max)| (min, Some(max))),
+                .map(|(min, max)| (min, Some(max)))
+                .delimited_by(just('{').padded(), just('}').padded()),
         ))
         .boxed();
 
