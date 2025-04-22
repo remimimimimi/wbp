@@ -7,6 +7,7 @@
 
 pub mod parser;
 pub mod props;
+pub mod values;
 
 #[derive(Debug)]
 pub struct Stylesheet {
