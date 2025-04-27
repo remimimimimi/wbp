@@ -469,14 +469,34 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         })
         .collect::<Vec<_>>();
 
+    let arms = props_names.iter().map(|&name| {
+        let ty = format_ident!("{}", name.to_case(Case::Pascal));
+        quote! {
+            #name => {#ty::parse(input).map(|t| (#ty::ID, t.into()))}
+        }
+    });
+
+    let prop_union_parse = quote! {
+        pub fn parse<'i, 't>(prop_name: &str, input: &mut Parser<'i, 't>) -> Result<(PropIndex, Self), ()> {
+            match prop_name.to_lowercase().as_str() {
+                #(#arms)*
+                _ => Err(())
+            }
+        }
+    };
+
     quote! {
         #(#props)*
 
-        union PropUnion {
+        pub(super) union PropUnion {
             #(#prop_union_variants),*
         }
 
         #(#prop_to_from_union)*
+
+        impl PropUnion {
+            #prop_union_parse
+        }
     }
     .into()
 }

@@ -26,9 +26,14 @@ trait Indexable {
 css_properties!("src/css/props.json");
 
 // TODO: Implement drop, since every variant of prop union is manual drop.
+// TODO: Add debug via reflection.
 pub struct Props(HashMap<PropIndex, PropUnion>);
 
 impl Props {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
     pub fn get<'a, T: Indexable>(&'a self) -> Option<&'a T>
     where
         &'a T: From<&'a PropUnion>,
@@ -39,4 +44,19 @@ impl Props {
     pub fn set<T: Indexable + Into<PropUnion>>(&mut self, value: T) {
         self.0.insert(T::ID, value.into());
     }
+
+    pub unsafe fn set_idx<T: Into<PropUnion>>(&mut self, idx: PropIndex, value: T) {
+        self.0.insert(idx, value.into());
+    }
 }
+
+// #[test]
+// fn my_test() {
+//     use cssparser::*;
+
+//     let input = "transparent inherit repeat inherit inherit";
+//     let mut input = ParserInput::new(input);
+//     let mut parser = Parser::new(&mut input);
+
+//     let _ = dbg!(Background::parse(&mut parser));
+// }

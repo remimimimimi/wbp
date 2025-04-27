@@ -1,18 +1,23 @@
 use cssparser::*;
+use log::error;
+
+use crate::css::props::Props;
 
 use super::super::html::Selector;
 
-#[derive(Clone, Debug)]
+use super::props::{PropIndex, PropUnion};
+
 pub struct Rule {
     pub selectors: Selector,
-    pub declarations: Vec<Declaration>,
+    pub important_declarations: Props,
+    pub declarations: Props,
 }
 
-#[derive(Clone, Debug)]
+// #[derive(Clone, Debug)]
 pub struct Declaration {
-    pub name: String,
-    pub value: Vec<String>,
-    pub important: bool,
+    idx: PropIndex,
+    value: PropUnion,
+    important: bool,
 }
 
 pub struct DeclParser;
@@ -20,14 +25,16 @@ pub struct RuleParser;
 
 impl<'i> DeclarationParser<'i> for DeclParser {
     type Declaration = Declaration;
-    type Error = ();
+    type Error = CowRcStr<'i>;
 
     fn parse_value<'t>(
         &mut self,
         name: CowRcStr<'i>,
         input: &mut Parser<'i, 't>,
         _declaration_start: &ParserState,
-    ) -> Result<Declaration, ParseError<'i, ()>> {
+    ) -> Result<Declaration, ParseError<'i, CowRcStr<'i>>> {
+        let location = input.current_source_location();
+
         let mut value = vec![];
         let mut important = false;
 
@@ -53,24 +60,34 @@ impl<'i> DeclarationParser<'i> for DeclParser {
             }
         }
 
+        let value = value.join(" ");
+
+        let mut dinput = ParserInput::new(&value);
+        let mut parser = Parser::new(&mut dinput);
+
+        let (idx, value) = PropUnion::parse(&*name, &mut parser).map_err(move |_| ParseError {
+            kind: ParseErrorKind::Custom(name),
+            location,
+        })?;
+
         Ok(Declaration {
-            name: name.to_string(),
+            idx,
             value,
             important,
         })
     }
 }
 
-impl AtRuleParser<'_> for DeclParser {
+impl<'i> AtRuleParser<'i> for DeclParser {
     type Prelude = ();
     type AtRule = Declaration;
-    type Error = ();
+    type Error = CowRcStr<'i>;
 }
 
-impl QualifiedRuleParser<'_> for DeclParser {
+impl<'i> QualifiedRuleParser<'i> for DeclParser {
     type Prelude = ();
     type QualifiedRule = Declaration;
-    type Error = ();
+    type Error = CowRcStr<'i>;
 }
 
 // Extend this when we will need at rules support.
@@ -80,7 +97,7 @@ impl AtRuleParser<'_> for RuleParser {
     type Error = ();
 }
 
-impl RuleBodyItemParser<'_, Declaration, ()> for DeclParser {
+impl<'i> RuleBodyItemParser<'i, Declaration, CowRcStr<'i>> for DeclParser {
     fn parse_qualified(&self) -> bool {
         false
     }
@@ -120,19 +137,28 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
         _: &ParserState,
         input: &mut Parser<'i, 't>,
     ) -> Result<Rule, ParseError<'i, ()>> {
-        let mut declarations = vec![];
+        let mut important_props = Props::new();
+        let mut props = Props::new();
 
         for item in RuleBodyParser::new(input, &mut DeclParser) {
-            if let Ok(decl) = item {
-                declarations.push(decl.clone());
-            } else {
-                eprintln!("Error parsing declaration: {:#?}", item);
+            match item {
+                Ok(decl) => unsafe {
+                    if decl.important {
+                        important_props.set_idx(decl.idx, decl.value);
+                    } else {
+                        props.set_idx(decl.idx, decl.value);
+                    }
+                },
+                Err(err) => {
+                    error!("Error parsing declaration: {:#?}", err);
+                }
             }
         }
 
         Ok(Rule {
             selectors: prelude,
-            declarations,
+            declarations: props,
+            important_declarations: important_props,
         })
     }
 }
@@ -147,15 +173,15 @@ pub fn parse_stylesheet(css: &str) -> Vec<Rule> {
         .collect()
 }
 
-#[test]
-fn css_parser_test() {
-    let css = r#"
-        h1, h2 { color: blue; font-size: 12px; }
-        .foo { background: #ff0; margin: 0 auto; }
-    "#;
+// #[test]
+// fn css_parser_test() {
+//     let css = r#"
+//         h1, h2 { color: blue; font-size: 12px; }
+//         .foo { background: #ff0; margin: 0 auto; }
+//     "#;
 
-    let rules = parse_stylesheet(css);
-    for rule in rules {
-        println!("{:#?}", rule);
-    }
-}
+//     let rules = parse_stylesheet(css);
+//     for rule in rules {
+//         println!("{:#?}", rule);
+//     }
+// }
