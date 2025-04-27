@@ -41,17 +41,15 @@ pub fn css_value_parser<'a>() -> impl Parser<'a, &'a str, VDS<'a>> {
         .padded();
 
     // Parse keywords: sequences of letters or hyphens
-    let keyword = ident.clone().map(VDS::Keyword);
+    let keyword = ident.map(VDS::Keyword);
 
     // Parse <value> placeholders
     let value = ident
-        .clone()
         .map(VDS::Value)
         .delimited_by(just('<').padded(), just('>').padded());
 
     // Parse <type> placeholders.
     let type_parser = ident
-        .clone()
         .map(VDS::Type)
         .delimited_by(just('\'').padded(), just('\'').padded());
 
@@ -61,7 +59,7 @@ pub fn css_value_parser<'a>() -> impl Parser<'a, &'a str, VDS<'a>> {
             .clone()
             .delimited_by(just('[').padded(), just(']').padded());
 
-        let base = choice((group, value.clone(), type_parser.clone(), keyword.clone()));
+        let base = choice((group, value, type_parser, keyword));
 
         // Multipliers: *, +, ?, or {n,m}
         let mult = choice((

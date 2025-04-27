@@ -1,22 +1,23 @@
 use convert_case::{Case, Casing};
 use css_vds_parser::VDS;
 
-/// Indicates whether the fields in this struct must appear
-/// in a fixed order (Sequence) or may appear in any order (AllOf).
+// TODO: Think about better name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Order {
+pub enum StructKind {
     /// The items must be parsed in sequence.
-    Ordered,
+    OrderedAnd,
     /// The items may appear in any order (e.g. CSS `all-of` groups).
-    Unordered,
+    UnorderedAnd,
+    /// At least one item from the struct must be present.
+    OneOrMore,
 }
 
 /// A reference to a type: either a leaf (builtin) or one of your IR items.
 #[derive(Debug, Clone, PartialEq)]
 pub enum IrType {
-    /// A keyword.
+    /// A leaf token.
     Leaf(String),
-    /// A predefined struct/enum by name.
+    /// A user-defined struct/enum by name
     Named(String),
     /// A repetition of some inner type.
     /// `min == 0, max == None` means `*` (ZeroOrMore),
@@ -41,7 +42,7 @@ pub struct IrField {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IrStruct {
     pub name: String,
-    pub order: Order,
+    pub kind: StructKind,
     pub fields: Vec<IrField>,
 }
 
@@ -66,7 +67,7 @@ pub enum IrItem {
     Enum(IrEnum),
 }
 
-pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrType {
+pub fn build_ir(name: &str, node: &VDS<'_>, items: &mut Vec<IrItem>) -> IrType {
     match node {
         VDS::Keyword(s) | VDS::Value(s) | VDS::Type(s) => IrType::Leaf(s.to_case(Case::Pascal)),
 
@@ -109,8 +110,12 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
                 .iter()
                 .enumerate()
                 .map(|(i, child)| {
-                    let field_name = format!("{}F{}", name, i);
-                    let field_ty = build_ir(&format!("{}{}", name, i), child, items);
+                    let field_name = format!("{}F{}", name, i).to_case(Case::Snake);
+                    let field_ty = build_ir(
+                        &format!("{}F{}", name.to_case(Case::Pascal), i),
+                        child,
+                        items,
+                    );
                     IrField {
                         name: field_name,
                         ty: field_ty,
@@ -119,7 +124,7 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
                 .collect();
             items.push(IrItem::Struct(IrStruct {
                 name: struct_name.clone(),
-                order: Order::Ordered,
+                kind: StructKind::OrderedAnd,
                 fields,
             }));
             IrType::Named(struct_name)
@@ -136,7 +141,7 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
                             ty: IrType::Leaf(lit.to_string()),
                         }
                     } else {
-                        let nested = format!("{}F{}", name, items.len());
+                        let nested = format!("{}F{}", name, items.len()).to_case(Case::Snake);
                         let ty = build_ir(&nested, child, items);
                         IrField {
                             name: nested.clone(),
@@ -147,7 +152,7 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
                 .collect();
             items.push(IrItem::Struct(IrStruct {
                 name: struct_name.clone(),
-                order: Order::Unordered,
+                kind: StructKind::UnorderedAnd,
                 fields,
             }));
             IrType::Named(struct_name)
@@ -158,15 +163,18 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
             let fields = children
                 .iter()
                 .map(|child| {
-                    let (field_name, ty) = if let Some(lit) = child.as_ext_ty() {
-                        (
-                            lit.to_case(Case::Snake),
-                            IrType::Leaf(lit.to_case(Case::Pascal)),
-                        )
-                    } else {
-                        let nested = format!("{}F{}", name, items.len());
-                        (nested.clone(), build_ir(&nested, child, items))
+                    let (field_name, ty) = match child {
+                        VDS::Keyword(_) => unreachable!(),
+                        VDS::Value(s) | VDS::Type(s) => (
+                            s.to_case(Case::Snake),
+                            IrType::Leaf(s.to_case(Case::Pascal)),
+                        ),
+                        _ => {
+                            let nested = format!("{}F{}", name, items.len()).to_case(Case::Snake);
+                            (nested.clone(), build_ir(&nested, child, items))
+                        }
                     };
+
                     IrField {
                         name: field_name,
                         ty,
@@ -175,7 +183,7 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
                 .collect();
             items.push(IrItem::Struct(IrStruct {
                 name: struct_name.clone(),
-                order: Order::Unordered,
+                kind: StructKind::OneOrMore,
                 fields,
             }));
             IrType::Named(struct_name)
@@ -213,17 +221,23 @@ pub fn build_ir<'a>(name: &str, node: &VDS<'a>, items: &mut Vec<IrItem>) -> IrTy
     }
 }
 
-#[test]
-fn ir_testing() {
-    use chumsky::Parser;
-    use css_vds_parser::css_value_parser;
+// #[test]
+// fn ir_testing() {
+//     use chumsky::Parser;
+//     use css_vds_parser::css_value_parser;
 
-    // let input = " 	[ [<uri> ]* [ auto | crosshair | default | pointer | move | e-resize | ne-resize | nw-resize | n-resize | se-resize | sw-resize | s-resize | w-resize | text | wait | help | progress ] ] | inherit";
-    // let input = "[['background-color' | 'background-colour'] || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position'] | inherit";
-    // let input = "['background-color' | 'background-image' | 'background-repeat' | 'background-attachment' | 'background-position'] | inherit";
-    let input = "['background-color' || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position'] | inherit";
-    let vds = dbg!(css_value_parser().parse(input).unwrap());
-    let mut items = vec![];
-    build_ir(&"cursor".to_case(Case::Pascal), &vds, &mut items);
-    dbg!(items);
-}
+//     // let input = " 	[ [<uri> ]* [ auto | crosshair | default | pointer | move | e-resize | ne-resize | nw-resize | n-resize | se-resize | sw-resize | s-resize | w-resize | text | wait | help | progress ] ] | inherit";
+//     // let input = "[['background-color' | 'background-colour'] || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position'] | inherit";
+//     // let input = "['background-color' | 'background-image' | 'background-repeat' | 'background-attachment' | 'background-position'] | inherit";
+//     // let input = "['background-color' || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position'] | inherit";
+//     let input = "
+// [ [ <percentage> | <length> | left | center | right ]
+//   [ <percentage> | <length> | top | center | bottom ]? ]
+// | [ [ left | center | right ]
+//     || [ top | center | bottom ] ]
+// | inherit";
+//     let vds = dbg!(css_value_parser().parse(input).unwrap());
+//     let mut items = vec![];
+//     build_ir(&"cursor".to_case(Case::Pascal), &vds, &mut items);
+//     dbg!(items);
+// }

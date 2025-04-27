@@ -25,11 +25,15 @@ trait Indexable {
 
 css_properties!("src/css/props.json");
 
+// TODO: Implement drop, since every variant of prop union is manual drop.
 pub struct Props(HashMap<PropIndex, PropUnion>);
 
 impl Props {
-    pub fn get<T: Indexable + From<PropUnion>>(&self) -> Option<T> {
-        self.0.get(&T::ID).map(|&pu| pu.into())
+    pub fn get<'a, T: Indexable>(&'a self) -> Option<&'a T>
+    where
+        &'a T: From<&'a PropUnion>,
+    {
+        self.0.get(&T::ID).map(|pu| pu.into())
     }
 
     pub fn set<T: Indexable + Into<PropUnion>>(&mut self, value: T) {

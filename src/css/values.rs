@@ -1,9 +1,13 @@
 use super::props::ParseableProperty;
 
-use cssparser::Parser;
+use cssparser::{
+    color::{parse_hash_color, parse_named_color},
+    ParseError, ParseErrorKind, Parser,
+};
+use url::Url;
 
 /// Relative length.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Relative {
     /// the 'font-size' of the relevant font
     Em(f32),
@@ -12,7 +16,7 @@ pub enum Relative {
 }
 
 /// Absolute length
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Absolute {
     /// Inches
     In(f32),
@@ -28,8 +32,7 @@ pub enum Absolute {
     Px(f32),
 }
 
-// TODO: Move values to different module.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Length {
     Relative(Relative),
     Absolute(Absolute),
@@ -58,7 +61,7 @@ impl<'i> ParseableProperty<'i> for Length {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 /// Contains normalized value in range from 0.0 to 1.0.
 pub struct Percentage(f32);
 
@@ -71,7 +74,7 @@ impl<'i> ParseableProperty<'i> for Percentage {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PaddingWidth {
     Length(Length),
     Percentage(Percentage),
@@ -90,7 +93,7 @@ impl<'i> ParseableProperty<'i> for PaddingWidth {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MarginWidth {
     Length(Length),
     Percentage(Percentage),
@@ -113,5 +116,78 @@ impl<'i> ParseableProperty<'i> for MarginWidth {
                     .map(|_| MarginWidth::Auto)
                     .map_err(|_| ())
             })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Color(pub u8, pub u8, pub u8);
+
+impl<'i> ParseableProperty<'i> for Color {
+    fn parse<'t>(input: &mut Parser<'i, 't>) -> Result<Self, ()> {
+        match input.next().map_err(|_| ()).unwrap() {
+            cssparser::Token::Ident(cow_rc_str) => {
+                parse_named_color(cow_rc_str).map(|(r, g, b)| Color(r, g, b))
+            }
+            cssparser::Token::IDHash(cow_rc_str) => {
+                parse_hash_color(cow_rc_str.as_bytes()).map(|(r, g, b, _)| Color(r, g, b))
+            }
+            cssparser::Token::Function(cow_rc_str) if *cow_rc_str == "rgb" => {
+                let r = input.try_parse(|input| {
+                    input
+                        .parse_nested_block(|input| {
+                            let arr = input.parse_comma_separated(
+                                |input| -> Result<f32, ParseError<'_, ()>> {
+                                    input.expect_number().map_err(|e| ParseError {
+                                        kind: ParseErrorKind::Custom(()),
+                                        location: e.location,
+                                    })
+                                },
+                            )?;
+                            let Some(&[r, g, b]) = arr.get(..3) else {
+                                return Err(ParseError {
+                                    kind: ParseErrorKind::Custom(()),
+                                    location: input.current_source_location(),
+                                });
+                            };
+                            Ok(Color(r as u8, g as u8, b as u8)) // TODO: Fix type conversion and propertly handle errors.
+                        })
+                        .map_err(|_| ())
+                });
+                if let Ok(c) = r {
+                    return Ok(c);
+                }
+
+                input
+                    .parse_nested_block(|input| {
+                        let arr = input.parse_comma_separated(
+                            |input| -> Result<f32, ParseError<'_, ()>> {
+                                input.expect_percentage().map_err(|e| ParseError {
+                                    kind: ParseErrorKind::Custom(()),
+                                    location: e.location,
+                                })
+                            },
+                        )?;
+                        let Some(&[r, g, b]) = arr.get(..3) else {
+                            return Err(ParseError {
+                                kind: ParseErrorKind::Custom(()),
+                                location: input.current_source_location(),
+                            });
+                        };
+                        Ok(Color((r * 255.) as u8, (g * 255.) as u8, (b * 255.) as u8))
+                    })
+                    .map_err(|_| ())
+            }
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Uri(Url); // lol
+
+impl<'i> ParseableProperty<'i> for Uri {
+    fn parse<'t>(input: &mut Parser<'i, 't>) -> Result<Self, ()> {
+        let s = input.expect_url().map_err(|_| ())?;
+        Url::parse(&s).map(Uri).map_err(|_| ())
     }
 }

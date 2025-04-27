@@ -61,20 +61,20 @@ impl<'i> DeclarationParser<'i> for DeclParser {
     }
 }
 
-impl<'i> AtRuleParser<'i> for DeclParser {
+impl AtRuleParser<'_> for DeclParser {
     type Prelude = ();
     type AtRule = Declaration;
     type Error = ();
 }
 
-impl<'i> QualifiedRuleParser<'i> for DeclParser {
+impl QualifiedRuleParser<'_> for DeclParser {
     type Prelude = ();
     type QualifiedRule = Declaration;
     type Error = ();
 }
 
 // Extend this when we will need at rules support.
-impl<'i> AtRuleParser<'i> for RuleParser {
+impl AtRuleParser<'_> for RuleParser {
     type Prelude = ();
     type AtRule = Rule;
     type Error = ();
