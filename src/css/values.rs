@@ -124,7 +124,7 @@ pub struct Color(pub u8, pub u8, pub u8);
 
 impl<'i> ParseableProperty<'i> for Color {
     fn parse<'t>(input: &mut Parser<'i, 't>) -> Result<Self, ()> {
-        match input.next().map_err(|_| ()).unwrap() {
+        match input.next().map_err(|_| ())? {
             cssparser::Token::Ident(cow_rc_str) => {
                 parse_named_color(cow_rc_str).map(|(r, g, b)| Color(r, g, b))
             }

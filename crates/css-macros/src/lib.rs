@@ -247,7 +247,7 @@ pub(crate) fn gen_parser_body(item: &IrItem) -> TokenStream {
 }
 
 pub(crate) fn gen_parser(item: &IrItem) -> TokenStream {
-    let name = match dbg!(item) {
+    let name = match item {
         IrItem::Struct(ir_struct) => &ir_struct.name,
         IrItem::Enum(ir_enum) => &ir_enum.name,
     };
