@@ -64,7 +64,7 @@ impl<'i> DeclarationParser<'i> for DeclParser {
         let mut dinput = ParserInput::new(&value);
         let mut parser = Parser::new(&mut dinput);
 
-        let (idx, value) = PropUnion::parse(&*name, &mut parser).map_err(move |_| ParseError {
+        let (idx, value) = PropUnion::parse(&name, &mut parser).map_err(move |_| ParseError {
             kind: ParseErrorKind::Custom(name),
             location,
         })?;

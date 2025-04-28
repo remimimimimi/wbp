@@ -27,13 +27,16 @@ css_properties!("src/css/props.json");
 
 // TODO: Implement drop, since every variant of prop union is manual drop.
 // TODO: Add debug via reflection.
+#[derive(Default)]
 pub struct Props(HashMap<PropIndex, PropUnion>);
 
 impl Props {
+    /// Create new empty property map.
     pub fn new() -> Self {
         Self(HashMap::new())
     }
 
+    /// Get property value.
     pub fn get<'a, T: Indexable>(&'a self) -> Option<&'a T>
     where
         &'a T: From<&'a PropUnion>,
@@ -41,10 +44,14 @@ impl Props {
         self.0.get(&T::ID).map(|pu| pu.into())
     }
 
+    /// Set property to value.
     pub fn set<T: Indexable + Into<PropUnion>>(&mut self, value: T) {
         self.0.insert(T::ID, value.into());
     }
 
+    /// Set property by `Indexable::ID`.
+    /// # Safety
+    /// This function is save to use when index is matches some type that implements `Indexable` with corresponding `ID`.
     pub unsafe fn set_idx<T: Into<PropUnion>>(&mut self, idx: PropIndex, value: T) {
         self.0.insert(idx, value.into());
     }
