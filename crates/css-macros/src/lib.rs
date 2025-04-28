@@ -472,11 +472,28 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         }
     });
 
-    let prop_union_parse = quote! {
-        pub fn parse<'i, 't>(prop_name: &str, input: &mut Parser<'i, 't>) -> Result<(PropIndex, Self), ()> {
-            match prop_name.to_lowercase().as_str() {
-                #(#arms)*
-                _ => Err(())
+    let prop_union_parse_body = quote! {
+        match prop_name.to_lowercase().as_str() {
+            #(#arms)*
+            _ => Err(())
+        }
+    };
+
+    let union_clone_arms = props_names.iter().enumerate().map(|(i, &name)| {
+        let variant = format_ident!("{}", name.to_case(Case::Snake));
+        let i = i as u8;
+        quote! {
+            #i => PropUnion {
+                #variant: self.#variant.clone()
+            },
+        }
+    });
+
+    let union_clone_body = {
+        quote! {
+            match idx {
+                #(#union_clone_arms)*
+                _ => unreachable!(),
             }
         }
     };
@@ -518,7 +535,13 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         #(#prop_to_from_union)*
 
         impl PropUnion {
-            #prop_union_parse
+            pub fn parse<'i, 't>(prop_name: &str, input: &mut Parser<'i, 't>) -> Result<(PropIndex, Self), ()> {
+                #prop_union_parse_body
+            }
+
+            pub unsafe fn clone_variant(&self, idx: PropIndex) -> Self {
+                #union_clone_body
+            }
         }
 
         impl fmt::Debug for Props {
