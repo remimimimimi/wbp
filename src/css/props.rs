@@ -55,6 +55,13 @@ impl Props {
     pub unsafe fn set_idx<T: Into<PropUnion>>(&mut self, idx: PropIndex, value: T) {
         self.0.insert(idx, value.into());
     }
+
+    /// Overwrite properties from key value pairs of `other` props.
+    pub fn extend(&mut self, other: &Props) {
+        for (&k, v) in other.0.iter() {
+            unsafe { self.set_idx(k, v.clone_variant(k)) }
+        }
+    }
 }
 
 // #[test]
