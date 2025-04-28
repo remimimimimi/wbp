@@ -8,7 +8,7 @@ use html5ever::{LocalName, Namespace};
 use precomputed_hash::PrecomputedHash;
 use selectors::{
     matching,
-    parser::{self, ParseRelative, SelectorList, SelectorParseErrorKind},
+    parser::{self, ParseRelative, Selector, SelectorList, SelectorParseErrorKind},
 };
 
 use crate::html::error::SelectorErrorKind;
@@ -34,6 +34,28 @@ impl SelectorGroup {
         SelectorList::parse(&Parser, &mut parser, ParseRelative::No)
             .map(|selectors| Self { selectors })
             .map_err(SelectorErrorKind::from)
+    }
+
+    /// Returns matching selector from simple selector list with highest specificity among matched in the list.
+    pub fn matching_selector<E: ElementNode + Clone>(
+        &self,
+        element: &ElementRef<E>,
+    ) -> Option<&Selector<Simple>> {
+        let mut caches = Default::default();
+        let mut context = matching::MatchingContext::new(
+            matching::MatchingMode::Normal,
+            None,
+            &mut caches,
+            matching::QuirksMode::NoQuirks,
+            matching::NeedsSelectorFlags::No,
+            matching::MatchingForInvalidation::No,
+        );
+
+        self.selectors
+            .slice()
+            .iter()
+            .filter(|&s| matching::matches_selector(s, 0, None, element, &mut context))
+            .max_by_key(|s| s.specificity())
     }
 
     /// Returns true if the element matches this selector.
