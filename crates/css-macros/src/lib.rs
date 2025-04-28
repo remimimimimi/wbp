@@ -1,6 +1,6 @@
 //! This crate is strictly for internal usage of wbp and use to generate properties structs based on the json description. See `props.json` and `props.rs` for example usage.
 
-use std::{env::current_dir, fs::File, io::read_to_string};
+use std::{fs::File, io::read_to_string};
 
 use chumsky::Parser as _;
 use convert_case::{Case, Casing};
@@ -399,11 +399,6 @@ pub(crate) fn gen_property(i: u8, prop: &Property) -> TokenStream {
 
 #[proc_macro]
 pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    println!(
-        "The current directory is {}",
-        current_dir().unwrap().display()
-    );
-
     let mut tokens_iter = tokens.into_iter();
     // TODO: figure out how to handle this properly.
     let first_token = tokens_iter.next().expect("Expected one string literal.");
