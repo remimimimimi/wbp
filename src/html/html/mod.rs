@@ -13,7 +13,7 @@ use html5ever::{local_name, namespace_url, ns};
 use selectors::matching::SelectorCaches;
 use tendril::TendrilSink;
 
-use crate::html::selector::Selector;
+use crate::html::selector::SelectorGroup;
 use crate::html::{ElementRef, Node};
 
 pub use tree_sink::HtmlTreeSink;
@@ -96,7 +96,7 @@ impl Html {
     }
 
     /// Returns an iterator over elements matching a selector.
-    pub fn select<'a, 'b>(&'a self, selector: &'b Selector) -> Select<'a, 'b, Node> {
+    pub fn select<'a, 'b>(&'a self, selector: &'b SelectorGroup) -> Select<'a, 'b, Node> {
         Select {
             inner: self.tree.nodes(),
             selector,
@@ -131,7 +131,7 @@ impl Html {
 /// Iterator over elements matching a selector.
 pub struct Select<'a, 'b, E: ElementNode> {
     inner: Nodes<'a, E>,
-    selector: &'b Selector,
+    selector: &'b SelectorGroup,
     caches: SelectorCaches,
 }
 
@@ -205,14 +205,14 @@ mod tree_sink;
 #[cfg(test)]
 mod tests {
     use super::Html;
-    use super::Selector;
+    use super::SelectorGroup;
 
     #[test]
     fn root_element_fragment() {
         let html = Html::parse_fragment(r#"<a href="http://github.com">1</a>"#);
         let root_ref = html.root_element();
         let href = root_ref
-            .select(&Selector::parse("a").unwrap())
+            .select(&SelectorGroup::parse("a").unwrap())
             .next()
             .unwrap();
         // assert_eq!(href.inner_html(), "1");
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn select_has_a_size_hint() {
         let html = Html::parse_document("<p>element1</p><p>element2</p><p>element3</p>");
-        let selector = Selector::parse("p").unwrap();
+        let selector = SelectorGroup::parse("p").unwrap();
         let (lower, upper) = html.select(&selector).size_hint();
         assert_eq!(lower, 0);
         assert_eq!(upper, Some(10));

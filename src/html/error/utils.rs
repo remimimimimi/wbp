@@ -81,11 +81,11 @@ fn render_int_unsigned(num: f32) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::html::Selector;
+    use crate::html::SelectorGroup;
 
     #[test]
     fn regression_test_issue212() {
-        let err = Selector::parse("div138293@!#@!!@#").unwrap_err();
+        let err = SelectorGroup::parse("div138293@!#@!!@#").unwrap_err();
         assert_eq!(err.to_string(), "Token \"@\" was not expected");
     }
 }

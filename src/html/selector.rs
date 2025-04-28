@@ -20,12 +20,12 @@ use super::element_ref::ElementNode;
 ///
 /// Represents a "selector group", i.e. a comma-separated list of selectors.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Selector {
+pub struct SelectorGroup {
     /// The CSS selectors.
-    selectors: SelectorList<Simple>,
+    pub selectors: SelectorList<Simple>,
 }
 
-impl Selector {
+impl SelectorGroup {
     /// Parses a CSS selector group.
     pub fn parse(selectors: &'_ str) -> Result<Self, SelectorErrorKind> {
         let mut parser_input = cssparser::ParserInput::new(selectors);
@@ -77,7 +77,7 @@ impl Selector {
     }
 }
 
-impl ToCss for Selector {
+impl ToCss for SelectorGroup {
     fn to_css<W>(&self, dest: &mut W) -> fmt::Result
     where
         W: fmt::Write,
@@ -214,11 +214,11 @@ impl ToCss for PseudoElement {
     }
 }
 
-impl<'i> TryFrom<&'i str> for Selector {
+impl<'i> TryFrom<&'i str> for SelectorGroup {
     type Error = SelectorErrorKind<'i>;
 
     fn try_from(s: &'i str) -> Result<Self, Self::Error> {
-        Selector::parse(s)
+        SelectorGroup::parse(s)
     }
 }
 
@@ -230,34 +230,34 @@ mod tests {
     #[test]
     fn selector_conversions() {
         let s = "#testid.testclass";
-        let _sel: Selector = s.try_into().unwrap();
+        let _sel: SelectorGroup = s.try_into().unwrap();
 
         let s = s.to_owned();
-        let _sel: Selector = (*s).try_into().unwrap();
+        let _sel: SelectorGroup = (*s).try_into().unwrap();
     }
 
     #[test]
     #[should_panic]
     fn invalid_selector_conversions() {
         let s = "<failing selector>";
-        let _sel: Selector = s.try_into().unwrap();
+        let _sel: SelectorGroup = s.try_into().unwrap();
     }
 
     #[test]
     fn has_selector() {
         let s = ":has(a)";
-        let _sel: Selector = s.try_into().unwrap();
+        let _sel: SelectorGroup = s.try_into().unwrap();
     }
 
     #[test]
     fn is_selector() {
         let s = ":is(a)";
-        let _sel: Selector = s.try_into().unwrap();
+        let _sel: SelectorGroup = s.try_into().unwrap();
     }
 
     #[test]
     fn where_selector() {
         let s = ":where(a)";
-        let _sel: Selector = s.try_into().unwrap();
+        let _sel: SelectorGroup = s.try_into().unwrap();
     }
 }

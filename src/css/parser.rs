@@ -3,12 +3,12 @@ use log::error;
 
 use crate::css::props::Props;
 
-use super::super::html::Selector;
+use super::super::html::SelectorGroup;
 
 use super::props::{PropIndex, PropUnion};
 
 pub struct Rule {
-    pub selectors: Selector,
+    pub selectors: SelectorGroup,
     pub important_declarations: Props,
     pub declarations: Props,
 }
@@ -108,7 +108,7 @@ impl<'i> RuleBodyItemParser<'i, Declaration, CowRcStr<'i>> for DeclParser {
 }
 
 impl<'i> QualifiedRuleParser<'i> for RuleParser {
-    type Prelude = Selector;
+    type Prelude = SelectorGroup;
     type QualifiedRule = Rule;
     type Error = ();
 
@@ -116,7 +116,7 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
     fn parse_prelude<'t>(
         &mut self,
         input: &mut Parser<'i, 't>,
-    ) -> Result<Selector, ParseError<'i, ()>> {
+    ) -> Result<SelectorGroup, ParseError<'i, ()>> {
         let start_pos = input.position();
         while let Ok(_tok) = input.next() {
             //
@@ -125,7 +125,7 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
 
         let selectors = input.slice(start_pos..end_pos).trim();
 
-        Selector::parse(selectors).map_err(|_| ParseError {
+        SelectorGroup::parse(selectors).map_err(|_| ParseError {
             kind: ParseErrorKind::Custom(()),
             location: input.current_source_location(),
         })
@@ -133,7 +133,7 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
 
     fn parse_block<'t>(
         &mut self,
-        prelude: Selector,
+        prelude: SelectorGroup,
         _: &ParserState,
         input: &mut Parser<'i, 't>,
     ) -> Result<Rule, ParseError<'i, ()>> {

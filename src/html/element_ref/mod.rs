@@ -9,7 +9,7 @@ use ego_tree::NodeRef;
 use selectors::matching::SelectorCaches;
 
 use crate::html::node::Element;
-use crate::html::{Node, Selector};
+use crate::html::{Node, SelectorGroup};
 
 use super::node;
 
@@ -90,7 +90,7 @@ impl<'a, E: ElementNode> ElementRef<'a, E> {
     }
 
     /// Returns an iterator over descendent elements matching a selector.
-    pub fn select<'b>(&self, selector: &'b Selector) -> Select<'a, 'b, E> {
+    pub fn select<'b>(&self, selector: &'b SelectorGroup) -> Select<'a, 'b, E> {
         let mut inner = self.traverse();
         inner.next(); // Skip Edge::Open(self).
 
@@ -183,7 +183,7 @@ impl<'a, E: ElementNode> Deref for ElementRef<'a, E> {
 pub struct Select<'a, 'b, E: ElementNode> {
     scope: ElementRef<'a, E>,
     inner: Traverse<'a, E>,
-    selector: &'b Selector,
+    selector: &'b SelectorGroup,
     caches: SelectorCaches,
 }
 

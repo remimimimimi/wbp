@@ -148,7 +148,7 @@ impl<E: ElementNode + Clone> Element for ElementRef<'_, E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::html::selector::{CssLocalName, Selector};
+    use crate::html::selector::{CssLocalName, SelectorGroup};
     use crate::html::Html;
     use selectors::attr::CaseSensitivity;
     use selectors::Element;
@@ -157,7 +157,7 @@ mod tests {
     fn test_has_id() {
         let html = "<p id='link_id_456'>hey there</p>";
         let fragment = Html::parse_fragment(html);
-        let sel = Selector::parse("p").unwrap();
+        let sel = SelectorGroup::parse("p").unwrap();
 
         let element = fragment.select(&sel).next().unwrap();
         assert!(element.has_id(
@@ -178,13 +178,13 @@ mod tests {
     fn test_is_link() {
         let html = "<link href='https://www.example.com'>";
         let fragment = Html::parse_fragment(html);
-        let sel = Selector::parse("link").unwrap();
+        let sel = SelectorGroup::parse("link").unwrap();
         let element = fragment.select(&sel).next().unwrap();
         assert!(element.is_link());
 
         let html = "<p>hey there</p>";
         let fragment = Html::parse_fragment(html);
-        let sel = Selector::parse("p").unwrap();
+        let sel = SelectorGroup::parse("p").unwrap();
         let element = fragment.select(&sel).next().unwrap();
         assert!(!element.is_link());
     }
@@ -193,7 +193,7 @@ mod tests {
     fn test_has_class() {
         let html = "<p class='my_class'>hey there</p>";
         let fragment = Html::parse_fragment(html);
-        let sel = Selector::parse("p").unwrap();
+        let sel = SelectorGroup::parse("p").unwrap();
         let element = fragment.select(&sel).next().unwrap();
         assert!(element.has_class(
             &CssLocalName::from("my_class"),
@@ -202,7 +202,7 @@ mod tests {
 
         let html = "<p>hey there</p>";
         let fragment = Html::parse_fragment(html);
-        let sel = Selector::parse("p").unwrap();
+        let sel = SelectorGroup::parse("p").unwrap();
         let element = fragment.select(&sel).next().unwrap();
         assert!(!element.has_class(
             &CssLocalName::from("my_class"),

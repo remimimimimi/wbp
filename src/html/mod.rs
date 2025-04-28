@@ -138,7 +138,7 @@
 pub use crate::html::element_ref::ElementRef;
 pub use crate::html::html::{Html, HtmlTreeSink};
 pub use crate::html::node::Node;
-pub use crate::html::selector::Selector;
+pub use crate::html::selector::SelectorGroup;
 
 pub use selectors::{attr::CaseSensitivity, Element};
 

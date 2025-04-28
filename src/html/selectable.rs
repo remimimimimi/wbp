@@ -3,7 +3,7 @@
 use crate::html::{
     element_ref::{self, ElementRef},
     html::{self, Html},
-    selector::Selector,
+    selector::SelectorGroup,
 };
 
 use super::{element_ref::ElementNode, Node};
@@ -27,13 +27,13 @@ pub trait Selectable<'a, E: ElementNode + 'a> {
     type Select<'b>: Iterator<Item = ElementRef<'a, E>>;
 
     /// Applies the given `selector` to the collection of elements represented by `self`
-    fn select(self, selector: &Selector) -> Self::Select<'_>;
+    fn select(self, selector: &SelectorGroup) -> Self::Select<'_>;
 }
 
 impl<'a> Selectable<'a, Node> for &'a Html {
     type Select<'b> = html::Select<'a, 'b, Node>;
 
-    fn select(self, selector: &Selector) -> Self::Select<'_> {
+    fn select(self, selector: &SelectorGroup) -> Self::Select<'_> {
         Html::select(self, selector)
     }
 }
@@ -41,7 +41,7 @@ impl<'a> Selectable<'a, Node> for &'a Html {
 impl<'a, E: ElementNode + Clone> Selectable<'a, E> for ElementRef<'a, E> {
     type Select<'b> = element_ref::Select<'a, 'b, E>;
 
-    fn select(self, selector: &Selector) -> Self::Select<'_> {
+    fn select(self, selector: &SelectorGroup) -> Self::Select<'_> {
         ElementRef::select(&self, selector)
     }
 }
@@ -52,7 +52,7 @@ mod tests {
 
     fn select_one<'a, S, E: ElementNode>(
         selectable: S,
-        selector: &Selector,
+        selector: &SelectorGroup,
     ) -> Option<ElementRef<'a, E>>
     where
         S: Selectable<'a, E>,
@@ -66,10 +66,10 @@ mod tests {
             r#"<select class="foo"><option value="bar">foobar</option></select>"#,
         );
 
-        let selector = Selector::parse("select.foo").unwrap();
+        let selector = SelectorGroup::parse("select.foo").unwrap();
         let element = select_one(&fragment, &selector).unwrap();
 
-        let selector = Selector::parse("select.foo option[value='bar']").unwrap();
+        let selector = SelectorGroup::parse("select.foo option[value='bar']").unwrap();
         let _element = select_one(element, &selector).unwrap();
     }
 }

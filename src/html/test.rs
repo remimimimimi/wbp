@@ -1,8 +1,8 @@
-use crate::html::{Html, Selector};
+use crate::html::{Html, SelectorGroup};
 
 #[test]
 fn tag_with_newline() {
-    let selector = Selector::parse("a").unwrap();
+    let selector = SelectorGroup::parse("a").unwrap();
 
     let document = Html::parse_fragment(
         r#"
