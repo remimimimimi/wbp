@@ -498,6 +498,15 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         }
     });
 
+    let eq_comps = props_names.iter().map(|name| {
+        let struct_name_id = format_ident!("{}", name.to_case(Case::Pascal));
+        quote! {
+            if self.get::<#struct_name_id>() != other.get::<#struct_name_id>() {
+                return false
+            }
+        }
+    });
+
     quote! {
         #(#props)*
 
@@ -528,6 +537,14 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 #(#clone_props)*
 
                 props
+            }
+        }
+
+        impl PartialEq<Props> for Props {
+            fn eq(&self, other: &Props) -> bool {
+                #(#eq_comps)*
+
+                true
             }
         }
     }
