@@ -390,7 +390,7 @@ pub(crate) fn gen_property(i: u8, prop: &Property) -> TokenStream {
         #(#decls)*
 
         #[sealed]
-        impl Indexable for #ident {
+        impl Property for #ident {
             const ID: PropIndex = #i;
         }
 

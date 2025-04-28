@@ -20,7 +20,7 @@ pub type PropIndex = u8;
 /// each property. For now we assume that it there is less than 256
 /// different properties.
 #[sealed]
-pub trait Indexable {
+pub trait Property {
     const ID: PropIndex;
 }
 
@@ -37,7 +37,7 @@ impl Props {
     }
 
     /// Get property value.
-    pub fn get<'a, T: Indexable>(&'a self) -> Option<&'a T>
+    pub fn get<'a, T: Property>(&'a self) -> Option<&'a T>
     where
         &'a T: From<&'a PropUnion>,
     {
@@ -45,7 +45,7 @@ impl Props {
     }
 
     /// Set property to value.
-    pub fn set<T: Indexable + Into<PropUnion>>(&mut self, value: T) {
+    pub fn set<T: Property + Into<PropUnion>>(&mut self, value: T) {
         self.0.insert(T::ID, value.into());
     }
 
