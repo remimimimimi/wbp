@@ -480,6 +480,24 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         }
     };
 
+    let props_kw = props_names.iter().map(|name| {
+        let struct_name_id = format_ident!("{}", name.to_case(Case::Pascal));
+        quote! {
+            if let Some(v) = self.get::<#struct_name_id>() {
+                let _ = debug_struct.field(#name, v);
+            }
+        }
+    });
+
+    let clone_props = props_names.iter().map(|name| {
+        let struct_name_id = format_ident!("{}", name.to_case(Case::Pascal));
+        quote! {
+            if let Some(v) = self.get::<#struct_name_id>() {
+                props.set(v.clone());
+            }
+        }
+    });
+
     quote! {
         #(#props)*
 
@@ -491,6 +509,26 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
         impl PropUnion {
             #prop_union_parse
+        }
+
+        impl fmt::Debug for Props {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let mut debug_struct = f.debug_struct("Props");
+
+                #(#props_kw)*
+
+                debug_struct.finish()
+            }
+        }
+
+        impl Clone for Props {
+            fn clone(&self) -> Self {
+                let mut props = Self::new();
+
+                #(#clone_props)*
+
+                props
+            }
         }
     }
     .into()

@@ -2,6 +2,7 @@
 #![allow(private_bounds)]
 
 use std::collections::HashMap;
+use std::fmt;
 
 use css_macros::css_properties;
 use cssparser::Parser;
@@ -26,7 +27,6 @@ trait Indexable {
 css_properties!("src/css/props.json");
 
 // TODO: Implement drop, since every variant of prop union is manual drop.
-// TODO: Add debug via reflection.
 #[derive(Default)]
 pub struct Props(HashMap<PropIndex, PropUnion>);
 
