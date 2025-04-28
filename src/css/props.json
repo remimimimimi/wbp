@@ -1,5 +1,11 @@
 [
     {
+        "name": "display",
+        "values": "inline | block | list-item | inline-block | table | inline-table | table-row-group | table-header-group | table-footer-group | table-row | table-column-group | table-column | table-cell | table-caption | none | inherit",
+        "initial_value": "inline",
+        "inherited": false,
+    },
+    {
         "name": "padding-top",
         "values": "inherit | <padding-width>",
         "initial_value": "0",
