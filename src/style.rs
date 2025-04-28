@@ -4,51 +4,33 @@
 //! complicated if I add support for compound selectors.
 
 use ego_tree::*;
-use std::collections::HashMap;
 
-use crate::css::{Rule, Selector, SimpleSelector, Specificity, Stylesheet, Value};
-
+use crate::css::{props::*, Rule, StyleSheet};
 use crate::html::*;
-
-/// Map from CSS property names to values.
-pub type PropertyMap = HashMap<String, Value>;
 
 // TODO: Rewrite with reference to the Node in other tree.
 /// A node with associated style data.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StyledNode {
     pub node: Node,
-    pub specified_values: PropertyMap,
-}
-
-#[derive(PartialEq)]
-pub enum Display {
-    Inline,
-    Block,
-    None,
+    pub props: Props,
 }
 
 impl StyledNode {
     /// Return the specified value of a property if it exists, otherwise `None`.
-    pub fn value(&self, name: &str) -> Option<Value> {
-        self.specified_values.get(name).cloned()
-    }
-
-    /// Return the specified value of property `name`, or property `fallback_name` if that doesn't
-    /// exist, or value `default` if neither does.
-    pub fn lookup(&self, name: &str, fallback_name: &str, default: &Value) -> Value {
-        self.value(name)
-            .unwrap_or_else(|| self.value(fallback_name).unwrap_or_else(|| default.clone()))
+    pub fn value<'a, T: Property>(&'a self) -> Option<&'a T>
+    where
+        &'a T: From<&'a PropUnion>,
+    {
+        self.props.get()
     }
 
     /// The value of the `display` property (defaults to inline).
     pub fn display(&self) -> Display {
-        match self.value("display") {
-            Some(Value::Keyword(s)) => match &*s {
-                "block" => Display::Block,
-                "none" => Display::None,
-                _ => Display::Inline,
-            },
+        match self.value() {
+            Some(Display::Block) => Display::Block,
+            Some(Display::None) => Display::None,
+            // NOTE: There is much more variants, but currently we ignore them!
             _ => Display::Inline,
         }
     }
@@ -58,12 +40,12 @@ impl StyledNode {
 ///
 /// This finds only the specified values at the moment. Eventually it should be extended to find the
 /// computed values too, including inherited values.
-pub fn style_tree(root: &Tree<Node>, stylesheet: &Stylesheet) -> Tree<StyledNode> {
+pub fn style_tree(root: &Tree<Node>, stylesheet: &StyleSheet) -> Tree<StyledNode> {
     root.map_ref(|n| StyledNode {
         node: n.clone(),
-        specified_values: match n {
+        props: match n {
             Node::Element(element) => specified_values(element, stylesheet),
-            _ => HashMap::new(), // Just ignore styling of other elements, e.g. text for now.
+            _ => Props::new(), // Just ignore styling of other elements, e.g. text for now.
         },
     })
 }
@@ -72,34 +54,33 @@ pub fn style_tree(root: &Tree<Node>, stylesheet: &Stylesheet) -> Tree<StyledNode
 /// Apply styles to a single element, returning the specified styles.
 ///
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
-fn specified_values(elem: &crate::html::node::Element, stylesheet: &Stylesheet) -> PropertyMap {
-    let mut values = HashMap::new();
+fn specified_values(elem: &crate::html::node::Element, stylesheet: &StyleSheet) -> Props {
+    let mut props = Props::new();
     let mut rules = matching_rules(elem, stylesheet);
 
     // Go through the rules from lowest to highest specificity.
     rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
     for (_, rule) in rules {
-        for declaration in &rule.declarations {
-            values.insert(declaration.name.clone(), declaration.value.clone());
-        }
+        let rule_props = &rule.declarations;
+        props.extend(rule_props);
     }
 
-    values
+    props
 }
 
+type Specificity = u32;
 /// A single CSS rule and the specificity of its most specific matching selector.
 type MatchedRule<'a> = (Specificity, &'a Rule);
 
 /// Find all CSS rules that match the given element.
 fn matching_rules<'a>(
     elem: &crate::html::node::Element,
-    stylesheet: &'a Stylesheet,
+    stylesheet: &'a StyleSheet,
 ) -> Vec<MatchedRule<'a>> {
     // For now, we just do a linear scan of all the rules.  For large
     // documents, it would be more efficient to store the rules in hash tables
     // based on tag name, id, class, etc.
     stylesheet
-        .rules
         .iter()
         .filter_map(|rule| match_rule(elem, rule))
         .collect()
@@ -107,45 +88,54 @@ fn matching_rules<'a>(
 
 /// If `rule` matches `elem`, return a `MatchedRule`. Otherwise return `None`.
 fn match_rule<'a>(elem: &crate::html::node::Element, rule: &'a Rule) -> Option<MatchedRule<'a>> {
-    // Find the first (most specific) matching selector.
-    rule.selectors
-        .iter()
-        .find(|selector| matches(elem, selector))
-        .map(|selector| (selector.specificity(), rule))
+    todo!()
+
+    // let highest_specificity_matching_selector =
+    //     rule.selectors.matching_selector(ElementRef::wrap(elem));
+    // if let Some(s) = highest_specificity_matching_selector {
+    //     todo!()
+    // } else {
+    //     todo!()
+    // }
+    // // Find the first (most specific) matching selector.
+    // rule.selectors
+    //     .iter()
+    //     .find(|selector| matches(elem, selector))
+    //     .map(|selector| (selector.specificity(), rule))
 }
 
-/// Selector matching:
-fn matches(elem: &crate::html::node::Element, selector: &Selector) -> bool {
-    match selector {
-        Selector::Simple(s) => matches_simple_selector(elem, s),
-    }
-}
+// /// Selector matching:
+// fn matches(elem: &crate::html::node::Element, selector: &Selector) -> bool {
+//     match selector {
+//         Selector::Simple(s) => matches_simple_selector(elem, s),
+//     }
+// }
 
-fn matches_simple_selector(elem: &crate::html::node::Element, selector: &SimpleSelector) -> bool {
-    // TODO: Check full name instead of just local one, but shood be good enough for now.
-    // Check type selector
-    if selector
-        .tag_name
-        .iter()
-        .any(|name| elem.name.local.as_ref() != *name)
-    {
-        return false;
-    }
+// fn matches_simple_selector(elem: &crate::html::node::Element, selector: &SimpleSelector) -> bool {
+//     // TODO: Check full name instead of just local one, but shood be good enough for now.
+//     // Check type selector
+//     if selector
+//         .tag_name
+//         .iter()
+//         .any(|name| elem.name.local.as_ref() != *name)
+//     {
+//         return false;
+//     }
 
-    // Check ID selector
-    if selector.id.iter().any(|id| elem.id() != Some(id)) {
-        return false;
-    }
+//     // Check ID selector
+//     if selector.id.iter().any(|id| elem.id() != Some(id)) {
+//         return false;
+//     }
 
-    // Check class selectors
-    if selector
-        .class
-        .iter()
-        .any(|class| !elem.classes().any(|c| c == class.as_str()))
-    {
-        return false;
-    }
+//     // Check class selectors
+//     if selector
+//         .class
+//         .iter()
+//         .any(|class| !elem.classes().any(|c| c == class.as_str()))
+//     {
+//         return false;
+//     }
 
-    // We didn't find any non-matching selector components.
-    true
-}
+//     // We didn't find any non-matching selector components.
+//     true
+// }

@@ -1,11 +1,13 @@
 use cssparser::*;
 use log::error;
 
-use crate::css::props::Props;
+use crate::css::props::{PropIndex, PropUnion, Props};
 use crate::selector::SelectorGroup;
 
-use super::props::{PropIndex, PropUnion};
+pub mod props;
+pub mod values;
 
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub selectors: SelectorGroup,
     pub important_declarations: Props,
@@ -13,13 +15,13 @@ pub struct Rule {
 }
 
 // #[derive(Clone, Debug)]
-pub struct Declaration {
+struct Declaration {
     idx: PropIndex,
     value: PropUnion,
     important: bool,
 }
 
-pub struct DeclParser;
+struct DeclParser;
 pub struct RuleParser;
 
 impl<'i> DeclarationParser<'i> for DeclParser {
@@ -162,7 +164,9 @@ impl<'i> QualifiedRuleParser<'i> for RuleParser {
     }
 }
 
-pub fn parse_stylesheet(css: &str) -> Vec<Rule> {
+pub type StyleSheet = Vec<Rule>;
+
+pub fn parse_stylesheet(css: &str) -> StyleSheet {
     let mut input = ParserInput::new(css);
     let mut parser = Parser::new(&mut input);
     let mut rule_parser = RuleParser;

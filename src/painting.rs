@@ -1,5 +1,4 @@
 // This type replaces Canvas from the original article.
-use crate::css::{Color, Value};
 use crate::layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
 
 use ego_tree::*;

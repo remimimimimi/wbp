@@ -64,13 +64,22 @@ impl Props {
     }
 }
 
-// #[test]
-// fn my_test() {
-//     use cssparser::*;
+#[test]
+fn my_test() {
+    use cssparser::*;
 
-//     let input = "transparent inherit repeat inherit inherit";
-//     let mut input = ParserInput::new(input);
-//     let mut parser = Parser::new(&mut input);
+    let input = "transparent inherit repeat inherit inherit";
+    let mut input = ParserInput::new(input);
+    let mut parser = Parser::new(&mut input);
 
-//     let _ = dbg!(Background::parse(&mut parser));
-// }
+    let _ = dbg!(Background::parse(&mut parser));
+
+    // let u = PropUnion {
+    //     margin: std::mem::ManuallyDrop::new(Margin::Inherit),
+    // };
+    // let x = unsafe {
+    //     PropUnion {
+    //         margin: u.margin.clone(),
+    //     }
+    // };
+}
