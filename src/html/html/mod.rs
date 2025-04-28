@@ -13,8 +13,8 @@ use html5ever::{local_name, namespace_url, ns};
 use selectors::matching::SelectorCaches;
 use tendril::TendrilSink;
 
-use crate::html::selector::SelectorGroup;
 use crate::html::{ElementRef, Node};
+use crate::selector::SelectorGroup;
 
 pub use tree_sink::HtmlTreeSink;
 

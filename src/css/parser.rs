@@ -2,8 +2,7 @@ use cssparser::*;
 use log::error;
 
 use crate::css::props::Props;
-
-use super::super::html::SelectorGroup;
+use crate::selector::SelectorGroup;
 
 use super::props::{PropIndex, PropUnion};
 

@@ -3,8 +3,8 @@
 use crate::html::{
     element_ref::{self, ElementRef},
     html::{self, Html},
-    selector::SelectorGroup,
 };
+use crate::selector::SelectorGroup;
 
 use super::{element_ref::ElementNode, Node};
 

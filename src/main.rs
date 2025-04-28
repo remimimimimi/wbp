@@ -21,6 +21,7 @@ pub mod layout;
 pub mod painting;
 pub mod style;
 pub mod winit_app;
+pub mod selector;
 
 const HTML_FILE_PATH: &str = "test.html";
 const CSS_FILE_PATH: &str = "test.css";

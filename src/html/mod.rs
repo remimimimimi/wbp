@@ -138,7 +138,6 @@
 pub use crate::html::element_ref::ElementRef;
 pub use crate::html::html::{Html, HtmlTreeSink};
 pub use crate::html::node::Node;
-pub use crate::html::selector::SelectorGroup;
 
 pub use selectors::{attr::CaseSensitivity, Element};
 
@@ -147,7 +146,6 @@ pub mod error;
 pub mod html;
 pub mod node;
 pub mod selectable;
-pub mod selector;
 
 pub(crate) mod tendril_util {
     use html5ever::tendril;

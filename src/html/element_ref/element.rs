@@ -6,7 +6,7 @@ use selectors::{
 };
 
 use super::{ElementNode, ElementRef};
-use crate::html::selector::{CssLocalName, CssString, NonTSPseudoClass, PseudoElement, Simple};
+use crate::selector::{CssLocalName, CssString, NonTSPseudoClass, PseudoElement, Simple};
 
 /// Note: will never match against non-tree-structure pseudo-classes.
 impl<E: ElementNode + Clone> Element for ElementRef<'_, E> {

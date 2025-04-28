@@ -11,10 +11,9 @@ use selectors::{
     parser::{self, ParseRelative, Selector, SelectorList, SelectorParseErrorKind},
 };
 
+use crate::html::element_ref::ElementNode;
 use crate::html::error::SelectorErrorKind;
 use crate::html::ElementRef;
-
-use super::element_ref::ElementNode;
 
 /// Wrapper around CSS selectors.
 ///

@@ -9,7 +9,8 @@ use ego_tree::NodeRef;
 use selectors::matching::SelectorCaches;
 
 use crate::html::node::Element;
-use crate::html::{Node, SelectorGroup};
+use crate::html::Node;
+use crate::selector::SelectorGroup;
 
 use super::node;
 
