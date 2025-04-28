@@ -148,8 +148,8 @@ impl<E: ElementNode + Clone> Element for ElementRef<'_, E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::html::selector::{CssLocalName, SelectorGroup};
     use crate::html::Html;
+    use crate::selector::{CssLocalName, SelectorGroup};
     use selectors::attr::CaseSensitivity;
     use selectors::Element;
 

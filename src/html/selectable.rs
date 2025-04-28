@@ -1,12 +1,8 @@
 //! Provides the [`Selectable`] to abstract over collections of elements
 
-use crate::html::{
-    element_ref::{self, ElementRef},
-    html::{self, Html},
-};
+use crate::html::element_ref::{self, ElementNode, ElementRef};
+use crate::html::{Html, Node};
 use crate::selector::SelectorGroup;
-
-use super::{element_ref::ElementNode, Node};
 
 /// Trait to abstract over collections of elements to which a [CSS selector][Selector] can be applied
 ///
@@ -31,7 +27,7 @@ pub trait Selectable<'a, E: ElementNode + 'a> {
 }
 
 impl<'a> Selectable<'a, Node> for &'a Html {
-    type Select<'b> = html::Select<'a, 'b, Node>;
+    type Select<'b> = crate::html::Select<'a, 'b, Node>;
 
     fn select(self, selector: &SelectorGroup) -> Self::Select<'_> {
         Html::select(self, selector)
