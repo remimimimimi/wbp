@@ -26,6 +26,7 @@ selectors = "0.27.0"
 tendril = "0.4.3"
 
 css-macros = { path = "crates/css-macros" }
+sealed = "0.6.0"
 
 
 [features]

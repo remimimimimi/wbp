@@ -389,6 +389,7 @@ pub(crate) fn gen_property(i: u8, prop: &Property) -> TokenStream {
     quote! {
         #(#decls)*
 
+        #[sealed]
         impl Indexable for #ident {
             const ID: PropIndex = #i;
         }
@@ -510,7 +511,7 @@ pub fn css_properties(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
     quote! {
         #(#props)*
 
-        pub(super) union PropUnion {
+        pub union PropUnion {
             #(#prop_union_variants),*
         }
 

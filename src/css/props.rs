@@ -1,11 +1,10 @@
 // We want to be as safe as possible, so forbid implementing Indexable and access to PropUnion.
 #![allow(private_bounds)]
-
-use std::collections::HashMap;
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use css_macros::css_properties;
 use cssparser::Parser;
+use sealed::sealed;
 
 use super::values::*;
 
@@ -20,7 +19,8 @@ pub type PropIndex = u8;
 /// using hash map. Macro will automatically assign unique number of
 /// each property. For now we assume that it there is less than 256
 /// different properties.
-trait Indexable {
+#[sealed]
+pub trait Indexable {
     const ID: PropIndex;
 }
 
