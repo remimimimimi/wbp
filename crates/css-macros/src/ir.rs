@@ -69,8 +69,8 @@ pub enum IrItem {
 
 pub fn build_ir(name: &str, node: &VDS<'_>, items: &mut Vec<IrItem>) -> IrType {
     match node {
-        VDS::Keyword(s) | VDS::Value(s) | VDS::Type(s) => IrType::Leaf(s.to_case(Case::Pascal)),
-
+        VDS::Keyword(s) | VDS::Value(s) => IrType::Leaf(s.to_case(Case::Pascal)),
+        VDS::Type(s) => IrType::Named(s.to_case(Case::Pascal)),
         VDS::Optional(inner) => {
             let ty = build_ir(name, inner, items);
             IrType::Repetition {
@@ -134,13 +134,16 @@ pub fn build_ir(name: &str, node: &VDS<'_>, items: &mut Vec<IrItem>) -> IrType {
             let struct_name = name.to_case(Case::Pascal);
             let fields = children
                 .iter()
-                .map(|child| {
-                    if let Some(lit) = child.as_ext_ty() {
-                        IrField {
-                            name: lit.to_case(Case::Snake),
-                            ty: IrType::Leaf(lit.to_string()),
-                        }
-                    } else {
+                .map(|child| match child {
+                    VDS::Keyword(lit) | VDS::Value(lit) => IrField {
+                        name: lit.to_case(Case::Snake),
+                        ty: IrType::Leaf(lit.to_string()),
+                    },
+                    VDS::Type(lit) => IrField {
+                        name: lit.to_case(Case::Snake),
+                        ty: IrType::Named(lit.to_string()),
+                    },
+                    _ => {
                         let nested = format!("{}F{}", name, items.len()).to_case(Case::Snake);
                         let ty = build_ir(&nested, child, items);
                         IrField {
@@ -165,9 +168,13 @@ pub fn build_ir(name: &str, node: &VDS<'_>, items: &mut Vec<IrItem>) -> IrType {
                 .map(|child| {
                     let (field_name, ty) = match child {
                         VDS::Keyword(_) => unreachable!(),
-                        VDS::Value(s) | VDS::Type(s) => (
+                        VDS::Value(s) => (
                             s.to_case(Case::Snake),
                             IrType::Leaf(s.to_case(Case::Pascal)),
+                        ),
+                        VDS::Type(s) => (
+                            s.to_case(Case::Snake),
+                            IrType::Named(s.to_case(Case::Pascal)),
                         ),
                         _ => {
                             let nested = format!("{}F{}", name, items.len()).to_case(Case::Snake);
@@ -198,9 +205,13 @@ pub fn build_ir(name: &str, node: &VDS<'_>, items: &mut Vec<IrItem>) -> IrType {
                         name: s.to_case(Case::Pascal),
                         payload: None,
                     },
-                    VDS::Value(s) | VDS::Type(s) => IrVariant {
+                    VDS::Value(s) => IrVariant {
                         name: s.to_case(Case::Pascal),
                         payload: Some(IrType::Leaf(s.to_case(Case::Pascal))),
+                    },
+                    VDS::Type(s) => IrVariant {
+                        name: s.to_case(Case::Pascal),
+                        payload: Some(IrType::Named(s.to_case(Case::Pascal))),
                     },
                     _ => {
                         let var_name = format!("{}V{}", name.to_case(Case::Pascal), items.len());

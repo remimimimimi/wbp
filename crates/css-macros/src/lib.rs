@@ -30,8 +30,14 @@ pub(crate) fn gen_struct_parser_body(ir_struct: &IrStruct) -> TokenStream {
         match ty {
             IrType::Leaf(predef_ty) | IrType::Named(predef_ty) => {
                 let predef_ty_ident = format_ident!("{}", predef_ty);
-                let mut res = quote! {
-                    input.try_parse(#predef_ty_ident::parse)
+                let mut res = if matches!(ty, IrType::Leaf(_)) {
+                    quote! {
+                        input.try_parse(values::#predef_ty_ident::parse)
+                    }
+                } else {
+                    quote! {
+                        input.try_parse(#predef_ty_ident::parse)
+                    }
                 };
                 if !from_rep {
                     res = quote! {
@@ -168,8 +174,14 @@ pub(crate) fn gen_enum_parser_body(IrEnum { name, variants }: &IrEnum) -> TokenS
                 Some(ty) => match ty {
                     IrType::Leaf(predef_ty) | IrType::Named(predef_ty) => {
                         let predef_ty_ident = format_ident!("{}", predef_ty);
-                        let mut res = quote! {
-                            input.try_parse(#predef_ty_ident::parse)
+                        let mut res = if matches!(ty, IrType::Leaf(_)) {
+                            quote! {
+                                input.try_parse(values::#predef_ty_ident::parse)
+                            }
+                        } else {
+                            quote! {
+                                input.try_parse(#predef_ty_ident::parse)
+                            }
                         };
                         if !from_rep {
                             res = quote! {
@@ -266,8 +278,14 @@ pub(crate) fn gen_type(ty: &IrType) -> TokenStream {
     match ty {
         IrType::Leaf(s) | IrType::Named(s) => {
             let s = format_ident!("{}", s.to_case(Case::Pascal));
-            quote! {
-                #s
+            if matches!(ty, IrType::Leaf(_)) {
+                quote! {
+                    values::#s
+                }
+            } else {
+                quote! {
+                    #s
+                }
             }
         }
         IrType::Repetition { inner, min, max } => match (min, max) {

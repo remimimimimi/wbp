@@ -6,7 +6,7 @@ use css_macros::css_properties;
 use cssparser::Parser;
 use sealed::sealed;
 
-use super::values::*;
+use super::values;
 
 // TODO: Think about other name for this trait, since values also use it.
 pub trait ParseableProperty<'i>: Sized {
