@@ -1,5 +1,47 @@
 [
     {
+        "name": "background-attachment",
+        "values": "scroll | fixed | inherit",
+        "initial_value": "scroll",
+        "inherited": false,
+    },
+    {
+        "name": "background-color",
+        "values": "transparent | inherit | <color>",
+        "initial_value": "scroll",
+        "inherited": false,
+    },
+    {
+        "name": "background-image",
+        "values": "none | inherit | <uri>",
+        "initial_value": "scroll",
+        "inherited": false,
+    },
+    {
+        "name": "background-position",
+        "values": "inherit | [ [ left | center | right | <percentage> | <length> ] [ top | center | bottom | <percentage> | <length> ]? ] | [ [ left | center | right ] || [ top | center | bottom ] ]",
+        "initial_value": "scroll",
+        "inherited": false,
+    },
+    {
+        "name": "background-repeat",
+        "values": "repeat | repeat-x | repeat-y | no-repeat | inherit",
+        "initial_value": "scroll",
+        "inherited": false,
+    },
+    {
+        "name": "background",
+        "values": "inherit | ['background-color' || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position']",
+        "initial_value": "",
+        "inherited": false,
+    },
+    {
+        "name": "border-color",
+        "values": "inherit | [ <color> | transparent ]{1,4}",
+        "initial_value": "",
+        "inherited": false
+    },
+    {
         "name": "border-top-width",
         "values": "inherit | <border-width>",
         "initial_value": "medium",
@@ -99,42 +141,6 @@
         "name": "margin",
         "values": "inherit | <margin-width>{1,4}",
         "initial_value": "0",
-        "inherited": false,
-    },
-    {
-        "name": "background-attachment",
-        "values": "scroll | fixed | inherit",
-        "initial_value": "scroll",
-        "inherited": false,
-    },
-    {
-        "name": "background-color",
-        "values": "transparent | inherit | <color>",
-        "initial_value": "scroll",
-        "inherited": false,
-    },
-    {
-        "name": "background-image",
-        "values": "none | inherit | <uri>",
-        "initial_value": "scroll",
-        "inherited": false,
-    },
-    {
-        "name": "background-position",
-        "values": "inherit | [ [ left | center | right | <percentage> | <length> ] [ top | center | bottom | <percentage> | <length> ]? ] | [ [ left | center | right ] || [ top | center | bottom ] ]",
-        "initial_value": "scroll",
-        "inherited": false,
-    },
-    {
-        "name": "background-repeat",
-        "values": "repeat | repeat-x | repeat-y | no-repeat | inherit",
-        "initial_value": "scroll",
-        "inherited": false,
-    },
-    {
-        "name": "background",
-        "values": "inherit | ['background-color' || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position']",
-        "initial_value": "",
         "inherited": false,
     },
     {

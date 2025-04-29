@@ -7,7 +7,7 @@ use cssparser::{
 use url::Url;
 
 /// Relative length.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Relative {
     /// the 'font-size' of the relevant font
     Em(f32),
@@ -16,7 +16,7 @@ pub enum Relative {
 }
 
 /// Absolute length
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Absolute {
     /// Inches
     In(f32),
@@ -32,7 +32,7 @@ pub enum Absolute {
     Px(f32),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Length {
     Relative(Relative),
     Absolute(Absolute),
@@ -61,7 +61,19 @@ impl<'i> ParseableProperty<'i> for Length {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Length {
+    pub fn to_px(&self) -> f32 {
+        match self {
+            Length::Relative(_) => todo!(),
+            Length::Absolute(absolute) => match absolute {
+                Absolute::Px(px) => *px,
+                _ => todo!(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Contains normalized value in range from 0.0 to 1.0.
 pub struct Percentage(f32);
 
@@ -74,7 +86,7 @@ impl<'i> ParseableProperty<'i> for Percentage {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PaddingWidth {
     Length(Length),
     Percentage(Percentage),
@@ -93,7 +105,16 @@ impl<'i> ParseableProperty<'i> for PaddingWidth {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl PaddingWidth {
+    pub fn to_px(&self) -> f32 {
+        match self {
+            PaddingWidth::Length(length) => length.to_px(),
+            _ => todo!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MarginWidth {
     Length(Length),
     Percentage(Percentage),
@@ -119,7 +140,16 @@ impl<'i> ParseableProperty<'i> for MarginWidth {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl MarginWidth {
+    pub fn to_px(&self) -> f32 {
+        match self {
+            MarginWidth::Length(length) => length.to_px(),
+            _ => todo!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BorderWidth {
     Thin,
     Medium,
@@ -148,7 +178,16 @@ impl<'i> ParseableProperty<'i> for BorderWidth {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl BorderWidth {
+    pub fn to_px(&self) -> f32 {
+        match self {
+            BorderWidth::Length(length) => length.to_px(),
+            _ => todo!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Color(pub u8, pub u8, pub u8);
 
 impl<'i> ParseableProperty<'i> for Color {
@@ -157,7 +196,7 @@ impl<'i> ParseableProperty<'i> for Color {
             cssparser::Token::Ident(cow_rc_str) => {
                 parse_named_color(cow_rc_str).map(|(r, g, b)| Color(r, g, b))
             }
-            cssparser::Token::IDHash(cow_rc_str) => {
+            cssparser::Token::Hash(cow_rc_str) | cssparser::Token::IDHash(cow_rc_str) => {
                 parse_hash_color(cow_rc_str.as_bytes()).map(|(r, g, b, _)| Color(r, g, b))
             }
             cssparser::Token::Function(cow_rc_str) if *cow_rc_str == "rgb" => {

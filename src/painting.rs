@@ -1,5 +1,11 @@
 // This type replaces Canvas from the original article.
-use crate::layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect};
+use crate::{
+    css::{
+        props::{Background, BorderColor, PropUnion, Property},
+        values::Color,
+    },
+    layout::{AnonymousBlock, BlockNode, InlineNode, LayoutBox, Rect},
+};
 
 use ego_tree::*;
 use tiny_skia::Pixmap;
@@ -26,7 +32,8 @@ fn render_layout_box(list: &mut DisplayList, layout_box: NodeRef<'_, LayoutBox>)
 }
 
 fn render_background(list: &mut DisplayList, layout_box: NodeRef<'_, LayoutBox>) {
-    if let Some(color) = get_color(layout_box, "background") {
+    // todo!()
+    if let Some(color) = get_color::<Background>(layout_box) {
         list.push(DisplayCommand::SolidColor(
             color,
             layout_box.value().dimensions.border_box(),
@@ -35,7 +42,7 @@ fn render_background(list: &mut DisplayList, layout_box: NodeRef<'_, LayoutBox>)
 }
 
 fn render_borders(list: &mut DisplayList, layout_box: NodeRef<LayoutBox>) {
-    let color = match get_color(layout_box, "border-color") {
+    let color = match get_color::<BorderColor>(layout_box) {
         Some(color) => color,
         _ => return,
     };
@@ -89,12 +96,12 @@ fn render_borders(list: &mut DisplayList, layout_box: NodeRef<LayoutBox>) {
 }
 
 /// Return the specified color for CSS property `name`, or None if no color was specified.
-fn get_color(layout_box: NodeRef<LayoutBox>, name: &str) -> Option<Color> {
+fn get_color<T: Property + Clone + Into<Color>>(layout_box: NodeRef<LayoutBox>) -> Option<Color>
+where
+    for<'a> &'a T: From<&'a PropUnion>,
+{
     match &layout_box.value().box_type {
-        BlockNode(style) | InlineNode(style) => match style.value(name) {
-            Some(Value::ColorValue(color)) => Some(color),
-            _ => None,
-        },
+        BlockNode(style) | InlineNode(style) => style.value::<T>().map(|v| v.into()),
         AnonymousBlock => None,
     }
 }
@@ -118,7 +125,7 @@ impl PixelBuffer for Pixmap {
         match item {
             DisplayCommand::SolidColor(color, rect) => {
                 let mut paint = tiny_skia::Paint::default();
-                paint.set_color_rgba8(color.r, color.g, color.b, color.a);
+                paint.set_color_rgba8(color.0, color.1, color.2, 255);
                 self.fill_rect(
                     tiny_skia::Rect::from_xywh(rect.x, rect.y, rect.width, rect.height).unwrap(),
                     &paint,

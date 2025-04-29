@@ -1,15 +1,20 @@
 //! Basic CSS block layout.
-
-// use crate::css::{
-//     Unit::Px,
-//     Value::{Keyword, Length},
-// };
-use crate::style::{Display, StyledNode};
+use crate::{
+    css::{
+        props::*,
+        values::{
+            Absolute, BorderWidth as BorderWidthV, Length, MarginWidth as MarginWidthV,
+            PaddingWidth as PaddingWidthV,
+        },
+    },
+    style::StyledNode,
+};
 use std::default::Default;
 
 pub use self::BoxType::{AnonymousBlock, BlockNode, InlineNode};
 
 use ego_tree::*;
+use log::warn;
 
 // CSS box model. All sizes are in px.
 
@@ -85,6 +90,7 @@ pub fn layout_tree(
         Display::Block => BlockNode(root_style_node.value().clone()),
         Display::Inline => InlineNode(root_style_node.value().clone()),
         Display::None => panic!("Root node has display: none."),
+        dt => panic!("Unhandeled display type {:#?}", dt),
     }));
 
     build_layout_tree(layout_tree.root_mut(), root_style_node);
@@ -110,6 +116,9 @@ fn build_layout_tree<'a>(
                 child,
             ),
             Display::None => {}
+            dt => {
+                warn!("Unhandled display type met on layouting: {:#?}", dt)
+            }
         }
     }
 }
@@ -175,41 +184,128 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         let style = self.value().get_style_node().unwrap();
 
         // `width` has initial value `auto`.
-        let auto = Keyword("auto".to_string());
-        let mut width = style.value("width").unwrap_or(auto.clone());
+        // let auto = Keyword("auto".to_string());
+        let mut width = style.value::<Width>().unwrap_or(Width::Auto);
 
         // margin, border, and padding have initial value 0.
-        let zero = Length(0.0, Px);
+        let zero = Length::Absolute(Absolute::Px(0.0));
 
-        let mut margin_left = style.lookup("margin-left", "margin", &zero);
-        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+        let mut margin_left = style.lookup::<MarginLeft, Margin>(
+            |m| {
+                MarginLeft::MarginWidth(match m {
+                    Margin::Inherit => todo!(),
+                    Margin::MarginV0(margin_widths) => match margin_widths.len() {
+                        1 => margin_widths.get(0).unwrap().clone(),
+                        2 => margin_widths.get(1).unwrap().clone(),
+                        3 => margin_widths.get(1).unwrap().clone(),
+                        4 => margin_widths.get(3).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            MarginLeft::MarginWidth(MarginWidthV::Length(zero.clone())),
+        );
+        let mut margin_right = style.lookup::<MarginRight, Margin>(
+            |m| {
+                MarginRight::MarginWidth(match m {
+                    Margin::Inherit => todo!(),
+                    Margin::MarginV0(margin_widths) => match margin_widths.len() {
+                        1 => margin_widths.get(0).unwrap().clone(),
+                        2 => margin_widths.get(1).unwrap().clone(),
+                        3 => margin_widths.get(1).unwrap().clone(),
+                        4 => margin_widths.get(1).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            MarginRight::MarginWidth(MarginWidthV::Length(zero.clone())),
+        );
 
-        let border_left = style.lookup("border-left-width", "border-width", &zero);
-        let border_right = style.lookup("border-right-width", "border-width", &zero);
+        let border_left = style.lookup::<BorderLeftWidth, BorderWidth>(
+            |bw| {
+                BorderLeftWidth::BorderWidth(match bw {
+                    BorderWidth::Inherit => todo!(),
+                    BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
+                        1 => border_widths.get(0).unwrap().clone(),
+                        2 => border_widths.get(1).unwrap().clone(),
+                        3 => border_widths.get(1).unwrap().clone(),
+                        4 => border_widths.get(3).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            BorderLeftWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+        );
+        let border_right = style.lookup::<BorderRightWidth, BorderWidth>(
+            |bw| {
+                BorderRightWidth::BorderWidth(match bw {
+                    BorderWidth::Inherit => todo!(),
+                    BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
+                        1 => border_widths.get(0).unwrap().clone(),
+                        2 => border_widths.get(1).unwrap().clone(),
+                        3 => border_widths.get(1).unwrap().clone(),
+                        4 => border_widths.get(1).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            BorderRightWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+        );
 
-        let padding_left = style.lookup("padding-left", "padding", &zero);
-        let padding_right = style.lookup("padding-right", "padding", &zero);
+        let padding_left = style.lookup::<PaddingLeft, Padding>(
+            |p| {
+                PaddingLeft::PaddingWidth(match p {
+                    Padding::Inherit => todo!(),
+                    Padding::PaddingV0(padding_widths) => match padding_widths.len() {
+                        1 => padding_widths.get(0).unwrap().clone(),
+                        2 => padding_widths.get(1).unwrap().clone(),
+                        3 => padding_widths.get(1).unwrap().clone(),
+                        4 => padding_widths.get(3).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            PaddingLeft::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+        );
+        let padding_right = style.lookup::<PaddingRight, Padding>(
+            |p| {
+                PaddingRight::PaddingWidth(match p {
+                    Padding::Inherit => todo!(),
+                    Padding::PaddingV0(padding_widths) => match padding_widths.len() {
+                        1 => padding_widths.get(0).unwrap().clone(),
+                        2 => padding_widths.get(1).unwrap().clone(),
+                        3 => padding_widths.get(1).unwrap().clone(),
+                        4 => padding_widths.get(1).unwrap().clone(),
+                        _ => unreachable!(),
+                    },
+                })
+            },
+            PaddingRight::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+        );
 
         let total: f32 = [
-            &margin_left,
-            &margin_right,
-            &border_left,
-            &border_right,
-            &padding_left,
-            &padding_right,
-            &width,
+            margin_left.to_px(),
+            margin_right.to_px(),
+            border_left.to_px(),
+            border_right.to_px(),
+            padding_left.to_px(),
+            padding_right.to_px(),
+            width.to_px(),
         ]
         .iter()
-        .map(|v| v.to_px())
         .sum();
 
         // If width is not auto and the total is wider than the container, treat auto margins as 0.
-        if width != auto && total > containing_block.content.width {
-            if margin_left == auto {
-                margin_left = Length(0.0, Px);
+        if width != Width::Auto && total > containing_block.content.width {
+            if margin_left == MarginLeft::MarginWidth(MarginWidthV::Auto) {
+                margin_left = MarginLeft::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(0.0),
+                )));
             }
-            if margin_right == auto {
-                margin_right = Length(0.0, Px);
+            if margin_right == MarginRight::MarginWidth(MarginWidthV::Auto) {
+                margin_right = MarginRight::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(0.0),
+                )));
             }
         }
 
@@ -218,43 +314,63 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         // and afterward all values should be absolute lengths in px.
         let underflow = containing_block.content.width - total;
 
-        match (width == auto, margin_left == auto, margin_right == auto) {
+        match (
+            width == Width::Auto,
+            margin_left == MarginLeft::MarginWidth(MarginWidthV::Auto),
+            margin_right == MarginRight::MarginWidth(MarginWidthV::Auto),
+        ) {
             // If the values are overconstrained, calculate margin_right.
             (false, false, false) => {
-                margin_right = Length(margin_right.to_px() + underflow, Px);
+                margin_right = MarginRight::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(margin_right.to_px() + underflow),
+                )));
             }
 
             // If exactly one size is auto, its used value follows from the equality.
             (false, false, true) => {
-                margin_right = Length(underflow, Px);
+                margin_right = MarginRight::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(underflow),
+                )));
             }
             (false, true, false) => {
-                margin_left = Length(underflow, Px);
+                margin_left = MarginLeft::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(underflow),
+                )));
             }
 
             // If width is set to auto, any other auto values become 0.
             (true, _, _) => {
-                if margin_left == auto {
-                    margin_left = Length(0.0, Px);
+                if margin_left == MarginLeft::MarginWidth(MarginWidthV::Auto) {
+                    margin_left = MarginLeft::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                        Absolute::Px(0.0),
+                    )));
                 }
-                if margin_right == auto {
-                    margin_right = Length(0.0, Px);
+                if margin_right == MarginRight::MarginWidth(MarginWidthV::Auto) {
+                    margin_right = MarginRight::MarginWidth(MarginWidthV::Length(
+                        Length::Absolute(Absolute::Px(0.0)),
+                    ));
                 }
 
                 if underflow >= 0.0 {
                     // Expand width to fill the underflow.
-                    width = Length(underflow, Px);
+                    width = Width::Length(Length::Absolute(Absolute::Px(underflow)));
                 } else {
                     // Width can't be negative. Adjust the right margin instead.
-                    width = Length(0.0, Px);
-                    margin_right = Length(margin_right.to_px() + underflow, Px);
+                    width = Width::Length(Length::Absolute(Absolute::Px(0.0)));
+                    margin_right = MarginRight::MarginWidth(MarginWidthV::Length(
+                        Length::Absolute(Absolute::Px(margin_right.to_px() + underflow)),
+                    ));
                 }
             }
 
             // If margin-left and margin-right are both auto, their used values are equal.
             (false, true, true) => {
-                margin_left = Length(underflow / 2.0, Px);
-                margin_right = Length(underflow / 2.0, Px);
+                margin_left = MarginLeft::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(underflow / 2.0),
+                )));
+                margin_right = MarginRight::MarginWidth(MarginWidthV::Length(Length::Absolute(
+                    Absolute::Px(underflow / 2.0),
+                )));
             }
         }
 
@@ -277,21 +393,113 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
         let d = &mut v.dimensions;
 
         // margin, border, and padding have initial value 0.
-        let zero = Length(0.0, Px);
+        let zero = Length::Absolute(Absolute::Px(0.0));
 
         // If margin-top or margin-bottom is `auto`, the used value is zero.
-        d.margin.top = style.lookup("margin-top", "margin", &zero).to_px();
-        d.margin.bottom = style.lookup("margin-bottom", "margin", &zero).to_px();
+        d.margin.top = style
+            .lookup::<MarginTop, Margin>(
+                |m| {
+                    MarginTop::MarginWidth(match m {
+                        Margin::Inherit => todo!(),
+                        Margin::MarginV0(margin_widths) => match margin_widths.len() {
+                            1 => margin_widths.get(0).unwrap().clone(),
+                            2 => margin_widths.get(0).unwrap().clone(),
+                            3 => margin_widths.get(0).unwrap().clone(),
+                            4 => margin_widths.get(0).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                    })
+                },
+                MarginTop::MarginWidth(MarginWidthV::Length(zero.clone())),
+            )
+            .to_px();
+        d.margin.bottom = style
+            .lookup::<MarginBottom, Margin>(
+                |m| {
+                    MarginBottom::MarginWidth(match m {
+                        Margin::Inherit => todo!(),
+                        Margin::MarginV0(margin_widths) => match margin_widths.len() {
+                            1 => margin_widths.get(0).unwrap().clone(),
+                            2 => margin_widths.get(0).unwrap().clone(),
+                            3 => margin_widths.get(3).unwrap().clone(),
+                            4 => margin_widths.get(3).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                    })
+                },
+                MarginBottom::MarginWidth(MarginWidthV::Length(zero.clone())),
+            )
+            .to_px();
 
         d.border.top = style
-            .lookup("border-top-width", "border-width", &zero)
+            .lookup::<BorderTopWidth, BorderWidth>(
+                |bw| {
+                    BorderTopWidth::BorderWidth(match bw {
+                        BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
+                            1 => border_widths.get(0).unwrap().clone(),
+                            2 => border_widths.get(0).unwrap().clone(),
+                            3 => border_widths.get(0).unwrap().clone(),
+                            4 => border_widths.get(0).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                        _ => todo!(),
+                    })
+                },
+                BorderTopWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+            )
             .to_px();
         d.border.bottom = style
-            .lookup("border-bottom-width", "border-width", &zero)
+            .lookup::<BorderBottomWidth, BorderWidth>(
+                |bw| {
+                    BorderBottomWidth::BorderWidth(match bw {
+                        BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
+                            1 => border_widths.get(0).unwrap().clone(),
+                            2 => border_widths.get(0).unwrap().clone(),
+                            3 => border_widths.get(3).unwrap().clone(),
+                            4 => border_widths.get(3).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                        _ => todo!(),
+                    })
+                },
+                BorderBottomWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+            )
             .to_px();
 
-        d.padding.top = style.lookup("padding-top", "padding", &zero).to_px();
-        d.padding.bottom = style.lookup("padding-bottom", "padding", &zero).to_px();
+        d.padding.top = style
+            .lookup::<PaddingTop, Padding>(
+                |m| {
+                    PaddingTop::PaddingWidth(match m {
+                        Padding::Inherit => todo!(),
+                        Padding::PaddingV0(padding_widths) => match padding_widths.len() {
+                            1 => padding_widths.get(0).unwrap().clone(),
+                            2 => padding_widths.get(0).unwrap().clone(),
+                            3 => padding_widths.get(0).unwrap().clone(),
+                            4 => padding_widths.get(0).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                    })
+                },
+                PaddingTop::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+            )
+            .to_px();
+        d.padding.bottom = style
+            .lookup::<PaddingBottom, Padding>(
+                |m| {
+                    PaddingBottom::PaddingWidth(match m {
+                        Padding::Inherit => todo!(),
+                        Padding::PaddingV0(padding_widths) => match padding_widths.len() {
+                            1 => padding_widths.get(0).unwrap().clone(),
+                            2 => padding_widths.get(0).unwrap().clone(),
+                            3 => padding_widths.get(3).unwrap().clone(),
+                            4 => padding_widths.get(3).unwrap().clone(),
+                            _ => todo!(),
+                        },
+                    })
+                },
+                PaddingBottom::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+            )
+            .to_px();
 
         d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
 
@@ -319,7 +527,9 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     fn calculate_block_height(&mut self) {
         // If the height is set to an explicit length, use that exact length.
         // Otherwise, just keep the value set by `layout_block_children`.
-        if let Some(Length(h, Px)) = self.value().get_style_node().unwrap().value("height") {
+        if let Some(Height::Length(Length::Absolute(Absolute::Px(h)))) =
+            self.value().get_style_node().unwrap().value::<Height>()
+        {
             self.value().dimensions.content.height = h;
         }
     }

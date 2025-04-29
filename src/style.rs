@@ -17,12 +17,31 @@ pub struct StyledNode {
 }
 
 impl StyledNode {
-    /// Return the specified value of a property if it exists, otherwise `None`.
-    pub fn value<'a, T: Property>(&'a self) -> Option<&'a T>
+    /// Return the specified value by reference of a property if it exists, otherwise `None`.
+    pub fn get<'a, T: Property>(&'a self) -> Option<&'a T>
     where
         &'a T: From<&'a PropUnion>,
     {
         self.props.get()
+    }
+
+    /// Return the specified value of a property if it exists, otherwise `None`.
+    pub fn value<T: Property + Clone>(&self) -> Option<T>
+    where
+        for<'a> &'a T: From<&'a PropUnion>,
+    {
+        self.get().cloned()
+    }
+
+    /// Return the specified value of property `name`, or property `fallback_name` if that doesn't
+    /// exist, or value `default` if neither does.
+    pub fn lookup<T: Property + Clone, U: Property + Clone>(&self, f: fn(U) -> T, default: T) -> T
+    where
+        for<'a> &'a T: From<&'a PropUnion>,
+        for<'a> &'a U: From<&'a PropUnion>,
+    {
+        self.value::<T>()
+            .unwrap_or_else(move || self.value::<U>().map(f).unwrap_or_else(|| default))
     }
 
     /// The value of the `display` property (defaults to inline).
