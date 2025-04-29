@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use cssparser::*;
 use log::error;
 
@@ -7,6 +9,10 @@ use crate::selector::SelectorGroup;
 pub mod props;
 pub mod values;
 
+/// Engine default style sheet.
+pub static DEAFULT_STYLESHEET: LazyLock<StyleSheet> =
+    LazyLock::new(|| parse_stylesheet(include_str!("default.css")));
+
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub selectors: SelectorGroup,
@@ -14,7 +20,6 @@ pub struct Rule {
     pub declarations: Props,
 }
 
-// #[derive(Clone, Debug)]
 struct Declaration {
     idx: PropIndex,
     value: PropUnion,
