@@ -195,30 +195,30 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 MarginLeft::MarginWidth(match m {
                     Margin::Inherit => todo!(),
                     Margin::MarginV0(margin_widths) => match margin_widths.len() {
-                        1 => margin_widths.get(0).unwrap().clone(),
-                        2 => margin_widths.get(1).unwrap().clone(),
-                        3 => margin_widths.get(1).unwrap().clone(),
-                        4 => margin_widths.get(3).unwrap().clone(),
+                        1 => *margin_widths.first().unwrap(),
+                        2 => *margin_widths.get(1).unwrap(),
+                        3 => *margin_widths.get(1).unwrap(),
+                        4 => *margin_widths.get(3).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            MarginLeft::MarginWidth(MarginWidthV::Length(zero.clone())),
+            MarginLeft::MarginWidth(MarginWidthV::Length(zero)),
         );
         let mut margin_right = style.lookup::<MarginRight, Margin>(
             |m| {
                 MarginRight::MarginWidth(match m {
                     Margin::Inherit => todo!(),
                     Margin::MarginV0(margin_widths) => match margin_widths.len() {
-                        1 => margin_widths.get(0).unwrap().clone(),
-                        2 => margin_widths.get(1).unwrap().clone(),
-                        3 => margin_widths.get(1).unwrap().clone(),
-                        4 => margin_widths.get(1).unwrap().clone(),
+                        1 => *margin_widths.first().unwrap(),
+                        2 => *margin_widths.get(1).unwrap(),
+                        3 => *margin_widths.get(1).unwrap(),
+                        4 => *margin_widths.get(1).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            MarginRight::MarginWidth(MarginWidthV::Length(zero.clone())),
+            MarginRight::MarginWidth(MarginWidthV::Length(zero)),
         );
 
         let border_left = style.lookup::<BorderLeftWidth, BorderWidth>(
@@ -226,30 +226,30 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 BorderLeftWidth::BorderWidth(match bw {
                     BorderWidth::Inherit => todo!(),
                     BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
-                        1 => border_widths.get(0).unwrap().clone(),
-                        2 => border_widths.get(1).unwrap().clone(),
-                        3 => border_widths.get(1).unwrap().clone(),
-                        4 => border_widths.get(3).unwrap().clone(),
+                        1 => *border_widths.first().unwrap(),
+                        2 => *border_widths.get(1).unwrap(),
+                        3 => *border_widths.get(1).unwrap(),
+                        4 => *border_widths.get(3).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            BorderLeftWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+            BorderLeftWidth::BorderWidth(BorderWidthV::Length(zero)),
         );
         let border_right = style.lookup::<BorderRightWidth, BorderWidth>(
             |bw| {
                 BorderRightWidth::BorderWidth(match bw {
                     BorderWidth::Inherit => todo!(),
                     BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
-                        1 => border_widths.get(0).unwrap().clone(),
-                        2 => border_widths.get(1).unwrap().clone(),
-                        3 => border_widths.get(1).unwrap().clone(),
-                        4 => border_widths.get(1).unwrap().clone(),
+                        1 => *border_widths.first().unwrap(),
+                        2 => *border_widths.get(1).unwrap(),
+                        3 => *border_widths.get(1).unwrap(),
+                        4 => *border_widths.get(1).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            BorderRightWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+            BorderRightWidth::BorderWidth(BorderWidthV::Length(zero)),
         );
 
         let padding_left = style.lookup::<PaddingLeft, Padding>(
@@ -257,30 +257,30 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 PaddingLeft::PaddingWidth(match p {
                     Padding::Inherit => todo!(),
                     Padding::PaddingV0(padding_widths) => match padding_widths.len() {
-                        1 => padding_widths.get(0).unwrap().clone(),
-                        2 => padding_widths.get(1).unwrap().clone(),
-                        3 => padding_widths.get(1).unwrap().clone(),
-                        4 => padding_widths.get(3).unwrap().clone(),
+                        1 => *padding_widths.first().unwrap(),
+                        2 => *padding_widths.get(1).unwrap(),
+                        3 => *padding_widths.get(1).unwrap(),
+                        4 => *padding_widths.get(3).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            PaddingLeft::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+            PaddingLeft::PaddingWidth(PaddingWidthV::Length(zero)),
         );
         let padding_right = style.lookup::<PaddingRight, Padding>(
             |p| {
                 PaddingRight::PaddingWidth(match p {
                     Padding::Inherit => todo!(),
                     Padding::PaddingV0(padding_widths) => match padding_widths.len() {
-                        1 => padding_widths.get(0).unwrap().clone(),
-                        2 => padding_widths.get(1).unwrap().clone(),
-                        3 => padding_widths.get(1).unwrap().clone(),
-                        4 => padding_widths.get(1).unwrap().clone(),
+                        1 => *padding_widths.first().unwrap(),
+                        2 => *padding_widths.get(1).unwrap(),
+                        3 => *padding_widths.get(1).unwrap(),
+                        4 => *padding_widths.get(1).unwrap(),
                         _ => unreachable!(),
                     },
                 })
             },
-            PaddingRight::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+            PaddingRight::PaddingWidth(PaddingWidthV::Length(zero)),
         );
 
         let total: f32 = [
@@ -402,15 +402,15 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                     MarginTop::MarginWidth(match m {
                         Margin::Inherit => todo!(),
                         Margin::MarginV0(margin_widths) => match margin_widths.len() {
-                            1 => margin_widths.get(0).unwrap().clone(),
-                            2 => margin_widths.get(0).unwrap().clone(),
-                            3 => margin_widths.get(0).unwrap().clone(),
-                            4 => margin_widths.get(0).unwrap().clone(),
+                            1 => *margin_widths.first().unwrap(),
+                            2 => *margin_widths.first().unwrap(),
+                            3 => *margin_widths.first().unwrap(),
+                            4 => *margin_widths.first().unwrap(),
                             _ => todo!(),
                         },
                     })
                 },
-                MarginTop::MarginWidth(MarginWidthV::Length(zero.clone())),
+                MarginTop::MarginWidth(MarginWidthV::Length(zero)),
             )
             .to_px();
         d.margin.bottom = style
@@ -419,15 +419,15 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                     MarginBottom::MarginWidth(match m {
                         Margin::Inherit => todo!(),
                         Margin::MarginV0(margin_widths) => match margin_widths.len() {
-                            1 => margin_widths.get(0).unwrap().clone(),
-                            2 => margin_widths.get(0).unwrap().clone(),
-                            3 => margin_widths.get(3).unwrap().clone(),
-                            4 => margin_widths.get(3).unwrap().clone(),
+                            1 => *margin_widths.first().unwrap(),
+                            2 => *margin_widths.first().unwrap(),
+                            3 => *margin_widths.get(3).unwrap(),
+                            4 => *margin_widths.get(3).unwrap(),
                             _ => todo!(),
                         },
                     })
                 },
-                MarginBottom::MarginWidth(MarginWidthV::Length(zero.clone())),
+                MarginBottom::MarginWidth(MarginWidthV::Length(zero)),
             )
             .to_px();
 
@@ -436,16 +436,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 |bw| {
                     BorderTopWidth::BorderWidth(match bw {
                         BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
-                            1 => border_widths.get(0).unwrap().clone(),
-                            2 => border_widths.get(0).unwrap().clone(),
-                            3 => border_widths.get(0).unwrap().clone(),
-                            4 => border_widths.get(0).unwrap().clone(),
+                            1 => *border_widths.first().unwrap(),
+                            2 => *border_widths.first().unwrap(),
+                            3 => *border_widths.first().unwrap(),
+                            4 => *border_widths.first().unwrap(),
                             _ => todo!(),
                         },
                         _ => todo!(),
                     })
                 },
-                BorderTopWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+                BorderTopWidth::BorderWidth(BorderWidthV::Length(zero)),
             )
             .to_px();
         d.border.bottom = style
@@ -453,16 +453,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 |bw| {
                     BorderBottomWidth::BorderWidth(match bw {
                         BorderWidth::BorderWidthV0(border_widths) => match border_widths.len() {
-                            1 => border_widths.get(0).unwrap().clone(),
-                            2 => border_widths.get(0).unwrap().clone(),
-                            3 => border_widths.get(3).unwrap().clone(),
-                            4 => border_widths.get(3).unwrap().clone(),
+                            1 => *border_widths.first().unwrap(),
+                            2 => *border_widths.first().unwrap(),
+                            3 => *border_widths.get(3).unwrap(),
+                            4 => *border_widths.get(3).unwrap(),
                             _ => todo!(),
                         },
                         _ => todo!(),
                     })
                 },
-                BorderBottomWidth::BorderWidth(BorderWidthV::Length(zero.clone())),
+                BorderBottomWidth::BorderWidth(BorderWidthV::Length(zero)),
             )
             .to_px();
 
@@ -472,15 +472,15 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                     PaddingTop::PaddingWidth(match m {
                         Padding::Inherit => todo!(),
                         Padding::PaddingV0(padding_widths) => match padding_widths.len() {
-                            1 => padding_widths.get(0).unwrap().clone(),
-                            2 => padding_widths.get(0).unwrap().clone(),
-                            3 => padding_widths.get(0).unwrap().clone(),
-                            4 => padding_widths.get(0).unwrap().clone(),
+                            1 => *padding_widths.first().unwrap(),
+                            2 => *padding_widths.first().unwrap(),
+                            3 => *padding_widths.first().unwrap(),
+                            4 => *padding_widths.first().unwrap(),
                             _ => todo!(),
                         },
                     })
                 },
-                PaddingTop::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+                PaddingTop::PaddingWidth(PaddingWidthV::Length(zero)),
             )
             .to_px();
         d.padding.bottom = style
@@ -489,15 +489,15 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                     PaddingBottom::PaddingWidth(match m {
                         Padding::Inherit => todo!(),
                         Padding::PaddingV0(padding_widths) => match padding_widths.len() {
-                            1 => padding_widths.get(0).unwrap().clone(),
-                            2 => padding_widths.get(0).unwrap().clone(),
-                            3 => padding_widths.get(3).unwrap().clone(),
-                            4 => padding_widths.get(3).unwrap().clone(),
+                            1 => *padding_widths.first().unwrap(),
+                            2 => *padding_widths.first().unwrap(),
+                            3 => *padding_widths.get(3).unwrap(),
+                            4 => *padding_widths.get(3).unwrap(),
                             _ => todo!(),
                         },
                     })
                 },
-                PaddingBottom::PaddingWidth(PaddingWidthV::Length(zero.clone())),
+                PaddingBottom::PaddingWidth(PaddingWidthV::Length(zero)),
             )
             .to_px();
 

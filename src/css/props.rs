@@ -175,7 +175,7 @@ impl From<BorderColor> for values::Color {
         match value {
             BorderColor::Inherit => todo!(),
             BorderColor::BorderColorV0(border_color_v0s) => match border_color_v0s.len() {
-                1 => match border_color_v0s.get(0) {
+                1 => match border_color_v0s.first() {
                     Some(BorderColorV0::Color(c)) => *c,
                     _ => todo!(),
                 },

@@ -103,7 +103,7 @@ pub fn style_tree(tree: &Tree<Node>, stylesheet: &StyleSheet) -> Tree<StyledNode
 /// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
 fn specified_values(elem: &ElementRef<Node>, stylesheet: &StyleSheet) -> Props {
     let mut props = Props::new();
-    let mut rules = matching_rules(&elem, stylesheet);
+    let mut rules = matching_rules(elem, stylesheet);
 
     // Go through the rules from lowest to highest specificity.
     rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
