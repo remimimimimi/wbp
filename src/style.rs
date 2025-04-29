@@ -97,19 +97,59 @@ pub fn style_tree(tree: &Tree<Node>, stylesheet: &StyleSheet) -> Tree<StyledNode
     style_tree
 }
 
-// TODO: ElementRef instead of ElementData
+// TODO: Allow user stylesheet. Don't forget to change doc comment below.
 /// Apply styles to a single element, returning the specified styles.
 ///
-/// To do: Allow multiple UA/author/user stylesheets, and implement the cascade.
+/// This is place where cascade part of CSS implemented.
+///
+/// Following [CSS 2.1
+/// specification](https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#cascade)
+/// this function first finds all declarations that applicable to the
+/// element, then sorts different sources by importance and applies
+/// most important on top of less important.
+///
+/// Specifically, in ascending order of precedence (omitting user stylesheets):
+///
+/// 1. user agent declarations
+/// 1. user normal declarations
+/// 1. author normal declarations
+/// 1. author important declarations
+/// 1. user important declarations
 fn specified_values(elem: &ElementRef<Node>, stylesheet: &StyleSheet) -> Props {
     let mut props = Props::new();
-    let mut rules = matching_rules(elem, stylesheet);
-
-    // Go through the rules from lowest to highest specificity.
-    rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
-    for (_, rule) in rules {
+    // Apply User Agent declarations
+    let user_agent_stylesheet = &*crate::css::DEAFULT_STYLESHEET;
+    let mut user_agent_rules = matching_rules(elem, user_agent_stylesheet);
+    user_agent_rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
+    user_agent_rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
+    for (_, rule) in user_agent_rules {
+        // We assume that there is no important rules in user agent stylesheet.
         let rule_props = &rule.declarations;
         props.extend(rule_props);
+    }
+
+    // Get Author declarations
+    let mut rules = matching_rules(elem, stylesheet);
+    // Go through the rules from lowest to highest specificity.
+    rules.sort_by(|&(a, _), &(b, _)| a.cmp(&b));
+
+    // NOTE: Do not merge those two loops, it will make semantics incorrect. For example
+    // ```css
+    // div { display: block !important; }
+    // div { padding: 12px; display: inline; }
+    // ```
+    // Will make div inline if we merge those loops.
+
+    // Assign regular properties
+    for (_, rule) in &rules {
+        let rule_props = &rule.declarations;
+        props.extend(rule_props);
+    }
+
+    // Override regular author properties with important ones.
+    for (_, rule) in &rules {
+        let important_rule_props = &rule.important_declarations;
+        props.extend(important_rule_props);
     }
 
     props
