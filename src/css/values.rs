@@ -120,6 +120,35 @@ impl<'i> ParseableProperty<'i> for MarginWidth {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum BorderWidth {
+    Thin,
+    Medium,
+    Thick,
+    Length(Length),
+}
+
+impl<'i> ParseableProperty<'i> for BorderWidth {
+    fn parse<'t>(input: &mut Parser<'i, 't>) -> Result<Self, ()> {
+        input
+            .try_parse(|input| input.expect_ident_matching("thin"))
+            .map(|_| BorderWidth::Thin)
+            .or_else(|_| {
+                input
+                    .try_parse(|input| input.expect_ident_matching("medium"))
+                    .map(|_| BorderWidth::Medium)
+                    .map_err(|_| ())
+            })
+            .or_else(|_| {
+                input
+                    .try_parse(|input| input.expect_ident_matching("thick"))
+                    .map(|_| BorderWidth::Thick)
+                    .map_err(|_| ())
+            })
+            .or_else(|_| input.try_parse(Length::parse).map(BorderWidth::Length))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Color(pub u8, pub u8, pub u8);
 
 impl<'i> ParseableProperty<'i> for Color {

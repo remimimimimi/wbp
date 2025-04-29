@@ -1,8 +1,44 @@
 [
     {
+        "name": "border-top-width",
+        "values": "inherit | <border-width>",
+        "initial_value": "medium",
+        "inherited": false,
+    },
+    {
+        "name": "border-right-width",
+        "values": "inherit | <border-width>",
+        "initial_value": "medium",
+        "inherited": false,
+    },
+    {
+        "name": "border-bottom-width",
+        "values": "inherit | <border-width>",
+        "initial_value": "medium",
+        "inherited": false,
+    },
+    {
+        "name": "border-left-width",
+        "values": "inherit | <border-width>",
+        "initial_value": "medium",
+        "inherited": false,
+    },
+    {
+        "name": "border-width",
+        "values": "inherit | <border-width>{1,4}",
+        "initial_value": "medium",
+        "inherited": false,
+    },
+    {
         "name": "display",
         "values": "inline | block | list-item | inline-block | table | inline-table | table-row-group | table-header-group | table-footer-group | table-row | table-column-group | table-column | table-cell | table-caption | none | inherit",
         "initial_value": "inline",
+        "inherited": false,
+    },
+    {
+        "name": "height",
+        "values": "auto | inherit | <length> | <percentage>",
+        "initial_value": "auto",
         "inherited": false,
     },
     {
@@ -100,5 +136,11 @@
         "values": "inherit | ['background-color' || 'background-image' || 'background-repeat' || 'background-attachment' || 'background-position']",
         "initial_value": "",
         "inherited": false,
-    }
+    },
+    {
+        "name": "width",
+        "values": "auto | inherit | <length> | <percentage>",
+        "initial_value": "auto",
+        "inherited": false,
+    },
 ]
