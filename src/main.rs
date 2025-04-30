@@ -1,7 +1,6 @@
 use crate::painting::PixelBuffer;
 
-use std::fs::{self, File};
-use std::io::Read;
+use std::fs;
 use std::num::NonZeroU32;
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::UNIX_EPOCH;
@@ -25,15 +24,6 @@ pub mod winit_app;
 
 const HTML_FILE_PATH: &str = "test.html";
 const CSS_FILE_PATH: &str = "test.css";
-
-pub fn read_source(filename: &str) -> String {
-    let mut s = String::new();
-    File::open(filename)
-        .unwrap()
-        .read_to_string(&mut s)
-        .unwrap();
-    s
-}
 
 pub fn file_modified_time_in_seconds(path: &str) -> u64 {
     fs::metadata(path)
@@ -74,8 +64,8 @@ fn render_thread(
             if let Some(mut pixmap) = Pixmap::new(width.get(), height.get()) {
                 pixmap.fill(tiny_skia::Color::WHITE);
 
-                let html = read_source(HTML_FILE_PATH);
-                let css = read_source(CSS_FILE_PATH);
+                let html = fs::read_to_string(HTML_FILE_PATH).unwrap();
+                let css = fs::read_to_string(CSS_FILE_PATH).unwrap();
                 let document = crate::html::Html::parse_fragment(&html);
                 // debug!("Document tree: {:#?}", document.tree);
                 // debug!("{}", document.tree);
