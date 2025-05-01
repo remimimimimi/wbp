@@ -159,7 +159,8 @@ pub trait Layoutable {
 impl Layoutable for NodeMut<'_, LayoutBox> {
     fn layout(&mut self, containing_block: Dimensions) {
         // TODO: Support other display types
-        if let BlockNode(_) = &self.value().box_type {
+        // if let BlockNode(_) = &self.value().box_type {
+        if matches!(self.value().box_type, BlockNode(_)) {
             self.layout_block(containing_block)
         }
     }

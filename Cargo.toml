@@ -11,23 +11,30 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-softbuffer = "0.4.6"
-tiny-skia = "0.11.4"
 url = "2.5.4"
-winit = "0.30"
+sealed = "0.6.0"
 log = "0.4.27"
 env_logger = "0.11.8"
 
+# CSS and HTML
 cssparser = "0.35.0"
 ego-tree = "0.10.0"
 html5ever = "0.31.0"
 precomputed-hash = "0.1.1"
 selectors = "0.27.0"
 tendril = "0.4.3"
-
 css-macros = { path = "crates/css-macros" }
-sealed = "0.6.0"
 
+# Window creation
+winit = "0.30"
+
+# Rendering
+tiny-skia = "0.11.4"
+softbuffer = "0.4.6"
+
+# Text rendering
+parley = "0.3.0"
+skrifa = "0.30.0"
 
 [features]
 default = ["errors"]
