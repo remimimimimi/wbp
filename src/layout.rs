@@ -131,6 +131,8 @@ pub trait Layoutable {
     /// Lay out a line box and its descendants (inline elements for now)
     fn layout_linebox(&mut self, containing_block: Dimensions);
 
+    fn layout_linebox_children(&mut self, containing_block: Dimensions);
+
     fn calculate_linebox_position(&mut self, containing_block: Dimensions);
 
     /// lay out
@@ -182,10 +184,13 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
 
     fn layout_linebox(&mut self, containing_block: Dimensions) {
         // width and height should be known by now
-        // TODO: write a separate function for position calculation
+
         self.calculate_linebox_position(containing_block);
+        self.layout_linebox_children(containing_block);
+    }
+
+    fn layout_linebox_children(&mut self, containing_block: Dimensions) {
         let d = self.value().dimensions;
-        // TODO: write a separate function for children layouting
         // method call layouting for InlineNode or text
         self.for_each_child(|c| {
             c.layout(d);
