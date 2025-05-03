@@ -172,13 +172,12 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             BlockNode(_) => self.layout_block(containing_block),
             AnonymousBlock => self.layout_anonymous(containing_block),
             LineBox => self.layout_linebox(containing_block),
-            _ => {}
+            InlineNode(_) => self.layout_inline(containing_block),
         }
     }
 
     fn layout_linebox(&mut self, containing_block: Dimensions) {
         // width and height should be known by now
-
         // TODO: write a separate function for position calculation
         let d = &mut self.value().dimensions;
         d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
@@ -266,13 +265,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             // TODO: recursively ask the inline box to find its width
             inline_box.calculate_inline_width();
             let inline_box_width = inline_box.value().dimensions.margin_box().width;
-
+            dbg!(
+                inline_box_width,
+                inline_box.value().dimensions.content.width
+            );
             // TODO: for TextBox and possibly other types fragmentation should occur here
             if accumulated_width + inline_box_width >= anonymous_block_width {
-                nodes_ids_per_line[line_index].push(*child_id);
                 line_index += 1;
                 nodes_ids_per_line.push(vec![]);
-                accumulated_width = 0.0;
+                nodes_ids_per_line[line_index].push(*child_id);
+                accumulated_width = inline_box_width;
             } else {
                 accumulated_width += inline_box_width;
                 nodes_ids_per_line[line_index].push(*child_id);
@@ -290,11 +292,12 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             // TODO: calculate the width and the height of the LineBox in separate functions
             let mut maximum_inline_box_height = 0.0;
             for inline_box_id in line_inline_box_ids.clone() {
-                let inline_box = self.tree().get(inline_box_id).unwrap();
+                let mut inline_box = self.tree().get_mut(inline_box_id).unwrap();
+                inline_box.calculate_inline_height();
                 let inline_box_height = inline_box.value().dimensions.margin_box().height;
                 maximum_inline_box_height = f32::max(maximum_inline_box_height, inline_box_height);
             }
-
+            dbg!(maximum_inline_box_height);
             let mut line_node = self.append(LayoutBox::new(LineBox));
             line_node.value().dimensions.content.width = anonymous_block_width;
             line_node.value().dimensions.content.height = maximum_inline_box_height;
@@ -354,7 +357,34 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     }
 
     fn calculate_inline_width(&mut self) {
+        // TODO: inherit margins, paddings and borders
+        // https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-width
+
+        // TODO: make a separate function that calculates margins/paddings/borders??
+        let style = self.value().get_style_node().unwrap();
+
+        let auto = Keyword("auto".to_string());
+
+        // margin, border, and padding have initial value 0.
+        let zero = Length(0.0, Px);
+
+        let mut margin_left = style.lookup("margin-left", "margin", &zero);
+        let mut margin_right = style.lookup("margin-right", "margin", &zero);
+        let border_left = style.lookup("border-left-width", "border-width", &zero);
+        let border_right = style.lookup("border-right-width", "border-width", &zero);
+        let padding_left = style.lookup("padding-left", "padding", &zero);
+        let padding_right = style.lookup("padding-right", "padding", &zero);
+
+        if margin_left == auto {
+            margin_left = zero.clone();
+        }
+        if margin_right == auto {
+            margin_right = zero.clone();
+        }
+
         let mut accumulated_width = 0.0;
+
+        dbg!(accumulated_width);
         self.for_each_child(|c| {
             // TODO: generalize the width calculation, because inline elements can also have TextBox as children
             c.calculate_inline_width();
@@ -366,7 +396,17 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             accumulated_width = 100.0;
         }
 
-        self.value().dimensions.content.width = accumulated_width;
+        let d = &mut self.value().dimensions;
+        d.padding.left = padding_left.to_px();
+        d.padding.right = padding_right.to_px();
+
+        d.border.left = border_left.to_px();
+        d.border.right = border_right.to_px();
+
+        d.margin.left = margin_left.to_px();
+        d.margin.right = margin_right.to_px();
+
+        d.content.width = accumulated_width;
     }
 
     fn calculate_inline_height(&mut self) {
@@ -382,7 +422,7 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             // TODO: change this default value to something else when text support is added
             max_height = 50.0;
         }
-        let d = &mut self.value().dimensions;
+        let d: &mut Dimensions = &mut self.value().dimensions;
         d.content.height = max_height;
     }
 
@@ -556,8 +596,6 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
                 }
                 // TODO: possibly create an unnecessary anonymous block e.g. if all children are inline
                 Err(mut slf) => {
-                    trace!("one");
-
                     slf.append(LayoutBox::new(AnonymousBlock));
                     slf.into_last_child().unwrap()
                 }
