@@ -136,6 +136,8 @@ pub trait Layoutable {
 
     fn layout_inline_children(&mut self, containing_block: Dimensions);
 
+    fn calculate_inline_position(&mut self, containing_block: Dimensions);
+
     fn calculate_inline_width(&mut self);
 
     fn calculate_inline_height(&mut self);
@@ -198,8 +200,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     }
 
     fn layout_inline(&mut self, containing_block: Dimensions) {
-        // TODO: write a separate function for position calculation
-        // TODO: maybe? use prev_sibling + its width instead
+        self.calculate_inline_position(containing_block);
+        self.calculate_inline_width();
+        self.calculate_inline_height();
+
+        let d = self.value().dimensions;
+
+        self.layout_inline_children(d);
+    }
+
+    fn calculate_inline_position(&mut self, containing_block: Dimensions) {
         let mut accumulated_width = 0.0;
         self.for_each_prev_sibling(|s| {
             // TODO: generalize the width calculation, because inline elements can also have TextBox as children
@@ -214,13 +224,6 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             + d.padding.left;
         self.value().dimensions.content.y =
             containing_block.content.y + d.margin.top + d.border.top + d.padding.top;
-
-        self.calculate_inline_width();
-        self.calculate_inline_height();
-
-        let d = self.value().dimensions;
-
-        self.layout_inline_children(d);
     }
 
     fn layout_inline_children(&mut self, containing_block: Dimensions) {
