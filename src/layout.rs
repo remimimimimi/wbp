@@ -131,6 +131,8 @@ pub trait Layoutable {
     /// Lay out a line box and its descendants (inline elements for now)
     fn layout_linebox(&mut self, containing_block: Dimensions);
 
+    fn calculate_linebox_position(&mut self, containing_block: Dimensions);
+
     /// lay out
     fn layout_inline(&mut self, containing_block: Dimensions);
 
@@ -181,6 +183,16 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     fn layout_linebox(&mut self, containing_block: Dimensions) {
         // width and height should be known by now
         // TODO: write a separate function for position calculation
+        self.calculate_linebox_position(containing_block);
+        let d = self.value().dimensions;
+        // TODO: write a separate function for children layouting
+        // method call layouting for InlineNode or text
+        self.for_each_child(|c| {
+            c.layout(d);
+        });
+    }
+
+    fn calculate_linebox_position(&mut self, containing_block: Dimensions) {
         let d = &mut self.value().dimensions;
         d.content.x = containing_block.content.x + d.margin.left + d.border.left + d.padding.left;
 
@@ -190,13 +202,6 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
             + d.margin.top
             + d.border.top
             + d.padding.top;
-
-        let d = self.value().dimensions;
-        // TODO: write a separate function for children layouting
-        // method call layouting for InlineNode or text
-        self.for_each_child(|c| {
-            c.layout(d);
-        });
     }
 
     fn layout_inline(&mut self, containing_block: Dimensions) {
@@ -360,9 +365,6 @@ impl Layoutable for NodeMut<'_, LayoutBox> {
     }
 
     fn calculate_inline_width(&mut self) {
-        // TODO: inherit margins, paddings and borders
-        // https://www.w3.org/TR/2011/REC-CSS2-20110607/visudet.html#inline-width
-
         // TODO: make a separate function that calculates margins/paddings/borders??
         let style = self.value().get_style_node().unwrap();
 
