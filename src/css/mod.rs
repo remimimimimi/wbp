@@ -4,6 +4,7 @@ use cssparser::*;
 use log::error;
 
 use crate::css::props::{PropIndex, PropUnion, Props};
+use crate::html::Html;
 use crate::selector::SelectorGroup;
 
 pub mod props;
@@ -179,6 +180,20 @@ pub fn parse_stylesheet(css: &str) -> StyleSheet {
     StyleSheetParser::new(&mut parser, &mut rule_parser)
         .filter_map(Result::ok)
         .collect()
+}
+
+pub fn from_style(html: &Html) -> StyleSheet {
+    let style_selector = crate::selector::SelectorGroup::parse("style").unwrap();
+
+    let mut stylesheet = StyleSheet::new();
+
+    for style_block in html.select(&style_selector) {
+        let style_text = style_block.text().next().unwrap_or_default();
+        let block_stylesheet = parse_stylesheet(style_text);
+        stylesheet.extend(block_stylesheet);
+    }
+
+    stylesheet
 }
 
 // #[test]

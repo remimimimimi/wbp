@@ -24,7 +24,6 @@ pub mod style;
 pub mod winit_app;
 
 const HTML_FILE_PATH: &str = "test.html";
-const CSS_FILE_PATH: &str = "test.css";
 
 pub fn read_source(filename: &str) -> String {
     let mut s = String::new();
@@ -75,11 +74,10 @@ fn render_thread(
                 pixmap.fill(tiny_skia::Color::WHITE);
 
                 let html = read_source(HTML_FILE_PATH);
-                let css = read_source(CSS_FILE_PATH);
                 let document = crate::html::Html::parse_fragment(&html);
                 // debug!("Document tree: {:#?}", document.tree);
                 // debug!("{}", document.tree);
-                let stylesheet = css::parse_stylesheet(&css);
+                let stylesheet = css::from_style(&document);
                 let style_tree = style::style_tree(&document.tree, &stylesheet);
 
                 let screen_dimensions = layout::Dimensions {
@@ -136,7 +134,6 @@ fn render_thread(
 
 pub fn entry(event_loop: EventLoop<()>) {
     let mut html_last_changed = file_modified_time_in_seconds(HTML_FILE_PATH);
-    let mut css_last_changed = file_modified_time_in_seconds(CSS_FILE_PATH);
 
     let app = winit_app::WinitAppBuilder::with_init(
         |elwt| {
@@ -172,11 +169,9 @@ pub fn entry(event_loop: EventLoop<()>) {
 
         // Reload files if they changed on drive.
         let html_last_changed_now = file_modified_time_in_seconds(HTML_FILE_PATH);
-        let css_last_changed_now = file_modified_time_in_seconds(CSS_FILE_PATH);
 
-        if html_last_changed != html_last_changed_now || css_last_changed != css_last_changed_now {
+        if html_last_changed != html_last_changed_now {
             html_last_changed = html_last_changed_now;
-            css_last_changed = css_last_changed_now;
             window.request_redraw();
         }
 
